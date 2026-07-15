@@ -1,0 +1,2156 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR utf-8">
+
+<head>
+	<!-- Cabecalho com metadados, fontes e bibliotecas de suporte do dashboard. -->
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description"
+		content="Dashboard de atendimentos internos â€” acompanhe o volume mensal de atendimentos registrados no Hubsoft." />
+	<!-- Credenciais do Supabase: preencha os atributos content abaixo. -->
+	<!-- Nunca versione este arquivo com as chaves reais preenchidas em repositÃ³rios pÃºblicos. -->
+	<meta name="supabase-url" content="https://bnhftpeqmocrtrounehp.supabase.co" />
+	<meta name="supabase-key" content="sb_publishable_ASQoX-jX2xY_aUGfVjkcjw_X85p16T4" />
+
+	<title>Dashboard de Atendimentos Internos</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+		rel="stylesheet" />
+	<link rel="stylesheet" href="styles.css" />
+	<!-- Bibliotecas de Exportacao -->
+	<script defer src=".../html2canvas.min.js"></script>
+	<script defer src=".../jspdf.umd.min.js"></script>
+	<script defer src=".../pptxgen.umd.min.js"></script>
+</head>
+
+<body>
+	<!-- Formas decorativas de fundo (sem impacto funcional nos dados). -->
+	<div class="bg-shape bg-shape-1"></div>
+	<div class="bg-shape bg-shape-2"></div>
+
+	<!-- Container principal: concentra importacao, filtros e todos os paineis analiticos. -->
+	<main class="dashboard">
+		<header class="dashboard__header">
+			<p class="eyebrow">Supervisao - Painel Unificado</p>
+			<h1>Dashboard de Atendimentos</h1>
+			<div id="sectionSwitcher" class="nav-tabs" aria-label="Alternar seÃ§Ã£o do dashboard">
+				<button id="tabHubsoft" class="nav-tab nav-tab--active" type="button" role="tab"
+					aria-controls="panelHubsoft" aria-selected="true">&#128203; Hubsoft</button>
+				<button id="tabAtendimentos" class="nav-tab" type="button" role="tab" aria-controls="panelAtendimentos"
+					aria-selected="false">&#128197; Atendimentos</button>
+				<button id="tabChat" class="nav-tab" type="button" role="tab" aria-controls="panelChat"
+					aria-selected="false">&#128172; Chat</button>
+				<button id="tabNps" class="nav-tab" type="button" role="tab" aria-controls="panelNps"
+					aria-selected="false">&#128200; NPS</button>
+				<button id="tabPesquisa" class="nav-tab" type="button" role="tab" aria-controls="panelPesquisa"
+					aria-selected="false">&#129501; Pesquisa</button>
+				<button id="tabProspecto" class="nav-tab" type="button" role="tab" aria-controls="panelProspecto"
+					aria-selected="false">Prospectos</button>
+				<button id="tabOs" class="nav-tab" type="button" role="tab" aria-controls="panelOs"
+					aria-selected="false">&#128295; Ordens de Serviço</button>
+			</div>
+		</header>
+
+
+
+		<section id="panelHubsoft" class="dashboard-panel" aria-labelledby="tabHubsoft">
+			<div class="dashboard__export-buttons"
+				style="display: flex; gap: 10px; margin: 15px 0; justify-content: center;">
+				<button id="exportPdfBtn" class="add-button" type="button" title="Exportar dashboard para PDF">â¬‡
+					PDF</button>
+				<button id="exportPptxBtn" class="add-button" type="button"
+					title="Exportar dashboard para PowerPoint">â¬‡
+					PPTX</button>
+			</div>
+			<div class="semantic-legend" aria-label="Legenda de cores dos graficos">
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--ok"></span>Bom</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--info"></span>Informativo</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--warn"></span>Atencao</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--critical"></span>Critico</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--compare"></span>Comparativo</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--neutral"></span>Neutro</span>
+			</div>
+
+
+			<section class="card">
+				<!-- Bloco de entrada de dados: importacao + mapeamento + filtros. -->
+				<div class="card__title-wrap">
+					<h2>Curva de Atendimentos por Mes</h2>
+					<div class="card__actions">
+						<p id="status" class="status" role="status" aria-live="polite">Carregando dados...</p>
+						<button id="openManualForm" class="icon-button" type="button"
+							aria-label="Adicionar atendimento manualmente">+</button>
+					</div>
+				</div>
+				<div class="import-entry">
+					<div class="import-entry__header">
+						<div>
+							<h3>Importacao em lote</h3>
+							<p>Escolha um arquivo XML ou PDF. O sistema tenta identificar as colunas de mes e
+								quantidade
+								automaticamente.</p>
+						</div>
+						<div class="import-entry__pickers">
+							<label class="file-picker">
+								<input id="arquivoInput" type="file"
+									accept=".xml,.pdf,.xls,.xlsx,.csv,application/xml,text/xml,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" />
+								<span>Arquivo Atendimentos</span>
+							</label>
+							<label class="file-picker">
+								<input id="arquivoOsInput" type="file"
+									accept=".xls,.xlsx,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+								<span>Arquivo OS</span>
+							</label>
+						</div>
+					</div>
+					<div class="import-entry__actions">
+						<button id="importButton" class="add-button" type="button">Importar arquivo</button>
+						<button id="clearImportButton" class="secondary-button" type="button">Limpar
+							importacao</button>
+					</div>
+					<p id="fileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
+						selecionado.</p>
+					<p id="fileOsStatus" class="file-status" role="status" aria-live="polite">Arquivo OS nao
+						carregado.</p>
+					<div id="previewPanel" class="preview-panel is-collapsed">
+						<div class="preview-panel__header">
+							<h3>Previa da importacao</h3>
+							<button id="togglePreviewPanelButton" class="preview-panel__toggle" type="button"
+								aria-expanded="false" aria-controls="previewPanelContent">&#9662;</button>
+							<p id="previewSummary" class="preview-panel__summary">Selecione um arquivo para ver
+								as colunas
+								detectadas.</p>
+						</div>
+
+						<div id="previewPanelContent" class="preview-panel__content">
+							<div class="mapping-grid">
+								<label class="mapping-field">
+									<span>Coluna do mes</span>
+									<select id="monthColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna da quantidade</span>
+									<select id="quantityColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna do usuario (Abertura)</span>
+									<select id="openingUserColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna do usuario (ResponsÃ¡vel)</span>
+									<select id="userColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna da resolucao</span>
+									<select id="resolutionColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna status</span>
+									<select id="statusColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna data abertura (SLA)</span>
+									<select id="dataAberturaColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna data fechamento (SLA)</span>
+									<select id="dataFechamentoColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna descriÃ§Ã£o abertura</span>
+									<select id="descricaoAberturaColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna descriÃ§Ã£o fechamento</span>
+									<select id="descricaoFechamentoColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna motivo fechamento</span>
+									<select id="motivoFechamentoColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna tipo atendimento</span>
+									<select id="tipoAtendimentoColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna cidade</span>
+									<select id="cidadeColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna bairro</span>
+									<select id="bairroColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna usuario fechamento</span>
+									<select id="usuarioFechamentoColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna nome cliente</span>
+									<select id="nomeClienteColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna codigo cliente</span>
+									<select id="codigoClienteColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna protocolo atendimento</span>
+									<select id="protocoloAtendimentoColumnSelect"></select>
+								</label>
+								<label class="mapping-field">
+									<span>Coluna numero plano</span>
+									<select id="numeroPlanoColumnSelect"></select>
+								</label>
+								<button id="autoAdjustMappingButton" class="secondary-button" type="button">Autoajustar
+									colunas</button>
+								<button id="applyMappingButton" class="secondary-button" type="button">Aplicar
+									mapeamento</button>
+							</div>
+							<div class="table-wrap table-wrap--preview">
+								<table class="preview-table" aria-label="Previa dos dados importados">
+									<thead>
+										<tr>
+											<th>Mes</th>
+											<th>Quantidade</th>
+											<th>Usuario</th>
+											<th>Resolucao</th>
+										</tr>
+									</thead>
+									<tbody id="previewTableBody">
+										<tr>
+											<td colspan="4">Nenhum dado carregado ainda.</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<div class="filter-toggle-wrap">
+						<button id="toggleFilterSectionButton" class="secondary-button" type="button"
+							aria-expanded="false" aria-controls="filterSection" disabled>Filtros de
+							AnÃ¡lise</button>
+					</div>
+					<div id="filterSection" class="import-entry filter-section--hidden">
+						<div class="import-entry__header">
+							<h3>Filtros de AnÃ¡lise</h3>
+							<p>Filtre os dados importados por usuÃ¡rio de abertura ou responsÃ¡vel para anÃ¡lises
+								direcionadas.
+							</p>
+
+							<div class="mapping-grid">
+								<label class="mapping-field mapping-field--filter" data-multiselect="true">
+									<span>UsuÃ¡rio de Abertura</span>
+									<input id="filterOpeningUserSearch" class="filter-search" type="text"
+										placeholder="Buscar usuÃ¡rio..." />
+									<div id="filterOpeningUserOptions" class="filter-options"></div>
+									<select id="filterOpeningUser" class="filter-select filter-select--hidden" multiple
+										size="6"
+										aria-label="Filtro de usuÃ¡rios de abertura, selecione um ou mais"></select>
+								</label>
+								<label class="mapping-field mapping-field--filter" data-multiselect="true">
+									<span>UsuÃ¡rio ResponsÃ¡vel</span>
+									<input id="filterResponsibleUserSearch" class="filter-search" type="text"
+										placeholder="Buscar usuÃ¡rio..." />
+									<div id="filterResponsibleUserOptions" class="filter-options"></div>
+									<select id="filterResponsibleUser" class="filter-select filter-select--hidden"
+										multiple size="6"
+										aria-label="Filtro de usuÃ¡rios responsÃ¡veis, selecione um ou mais"></select>
+								</label>
+								<label class="mapping-field mapping-field--filter" data-multiselect="true">
+									<span>Tipo de Atendimento</span>
+									<input id="filterServiceTypeSearch" class="filter-search" type="text"
+										placeholder="Buscar tipo..." />
+									<div id="filterServiceTypeOptions" class="filter-options"></div>
+									<select id="filterServiceType" class="filter-select filter-select--hidden" multiple
+										size="6"
+										aria-label="Filtro de tipo de atendimento, selecione um ou mais"></select>
+								</label>
+								<label class="mapping-field mapping-field--filter" data-multiselect="true">
+									<span>Cidade</span>
+									<input id="filterCitySearch" class="filter-search" type="text"
+										placeholder="Buscar cidade..." />
+									<div id="filterCityOptions" class="filter-options"></div>
+									<select id="filterCity" class="filter-select filter-select--hidden" multiple
+										size="6" aria-label="Filtro de cidade, selecione uma ou mais"></select>
+								</label>
+								<label class="mapping-field mapping-field--filter" data-multiselect="true">
+									<span>Bairro</span>
+									<input id="filterBairroSearch" class="filter-search" type="text"
+										placeholder="Buscar bairro..." />
+									<div id="filterBairroOptions" class="filter-options"></div>
+									<select id="filterBairro" class="filter-select filter-select--hidden" multiple
+										size="6" aria-label="Filtro de bairro, selecione um ou mais"></select>
+								</label>
+								<label class="mapping-field mapping-field--filter" data-multiselect="true">
+									<span>MÃªs</span>
+									<input id="filterMonthSearch" class="filter-search" type="text"
+										placeholder="Buscar mÃªs..." />
+									<div id="filterMonthOptions" class="filter-options"></div>
+									<select id="filterMonth" class="filter-select filter-select--hidden" multiple
+										size="6" aria-label="Filtro de mÃªs, selecione um ou mais"></select>
+								</label>
+
+								<!-- Filtrar por equipe -->
+								<div class="mapping-field" style="grid-column: 1 / -1;">
+									<span>Filtro Rápido por Equipe</span>
+									<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem;">
+										<button id="filtroEquipeSuporte" class="secondary-button" type="button">
+											👥 Suporte
+										</button>
+										<button id="filtroEquipeLimpar" class="secondary-button" type="button">
+											✕ Limpar Equipe
+										</button>
+									</div>
+								</div>
+
+								<button id="applyFiltersBtn" class="add-button" type="button">Filtrar
+									Dados</button>
+								<button id="clearFiltersBtn" class="secondary-button" type="button">Limpar
+									Filtros</button>
+							</div>
+						</div>
+						<div class="preview-panel pivot-panel">
+							<div class="preview-panel__header">
+								<h3>Resultado pivoteado (Mes x Motivo)</h3>
+								<p id="pivotSummary" class="preview-panel__summary">Aguardando dados para gerar
+									o pivoteamento.
+								</p>
+							</div>
+							<div class="table-wrap table-wrap--preview">
+								<table class="preview-table" aria-label="Tabela pivoteada por mes e motivo">
+									<thead id="pivotTableHead">
+										<tr>
+											<th>Mes</th>
+											<th>Total</th>
+										</tr>
+									</thead>
+									<tbody id="pivotTableBody">
+										<tr>
+											<td colspan="2">Nenhum dado pivoteado ainda.</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<!-- FormulÃ¡rio de importaÃ§Ã£o -->
+				</div>
+
+				<div class="analytics-grid">
+					<section class="card analytics-card">
+						<div class="card__title-wrap">
+							<h2>Top 4 Atendentes</h2>
+							<p id="topUsersStatus" class="status">Aguardando importacao.</p>
+						</div>
+						<div id="podiumContainer" class="podium"></div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="topUsersChart" aria-label="Grafico top 4 atendentes" role="img"></canvas>
+						</div>
+					</section>
+					<section class="card analytics-card">
+						<div class="card__title-wrap">
+							<h2>Resolvidos Internos x Externos</h2>
+							<p id="resolutionStatus" class="status">Aguardando importacao.</p>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="resolutionChart" aria-label="Grafico de resolvidos internos e externos"
+								role="img"></canvas>
+						</div>
+						<div id="resolutionTopList" class="resolution-top-list"></div>
+					</section>
+				</div>
+
+				<div class="analytics-grid">
+					<section class="card analytics-card analytics-card--wide">
+						<div class="card__title-wrap">
+							<h2>Atendimentos e SLA por Mes (N1 Interno x N2 Externo/Tecnicos)</h2>
+							<p id="mesN1N2Status" class="status">Aguardando importacao.</p>
+						</div>
+						<div class="table-wrap">
+							<table class="preview-table" aria-label="Tabela de atendimentos e SLA medio por mes, separado por N1 interno e N2 externo/tecnicos">
+								<thead>
+									<tr>
+										<th rowspan="2">Mes</th>
+										<th colspan="2">N1 - Suporte Interno</th>
+										<th colspan="2">N2 - Externo (Tecnicos)</th>
+									</tr>
+									<tr>
+										<th>Atendimentos</th>
+										<th>SLA Medio</th>
+										<th>Atendimentos</th>
+										<th>SLA Medio</th>
+									</tr>
+								</thead>
+								<tbody id="mesN1N2TableBody">
+									<tr>
+										<td colspan="5">Nenhum dado disponivel.</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</section>
+				</div>
+				</div>
+
+				<!-- Dashboard SLA: distribuicao, medias e lista de atrasos. -->
+				<div class="sla-layout">
+					<section class="card analytics-card analytics-card--wide sla-main">
+						<div class="card__title-wrap">
+							<h2>SLA de Atendimentos</h2>
+							<p id="slaStatus" class="status">Aguardando importacao com data_cadastro e data_fechamento.
+							</p>
+							<div id="slaFilterGroup" class="sla-filter-group" role="toolbar"
+								aria-label="Filtrar SLA por modalidade">
+								<button type="button" class="sla-filter-btn is-active" data-modalidade-sla="todos"
+									aria-pressed="true">Todos</button>
+								<button type="button" class="sla-filter-btn" data-modalidade-sla="remoto"
+									aria-pressed="false">Remoto</button>
+								<button type="button" class="sla-filter-btn" data-modalidade-sla="externo"
+									aria-pressed="false">Externo</button>
+							</div>
+						</div>
+						<div class="sla-summary" id="slaSummary"></div>
+
+						<div class="sla-main__charts">
+							<section class="sla-subpanel" aria-label="Distribuicao de SLA">
+								<h3 class="sla-subpanel__title">Distribuicao de SLA</h3>
+								<div class="chart-wrap chart-wrap--small">
+									<canvas id="slaDistChart" aria-label="Grafico distribuicao SLA" role="img"></canvas>
+								</div>
+							</section>
+
+							<section class="sla-subpanel" aria-label="SLA medio por tipo de atendimento">
+								<div class="card__title-wrap">
+									<h3 class="sla-subpanel__title">SLA Medio por Tipo de Atendimento</h3>
+									<p id="slaTipoStatus" class="status">Aguardando importacao.</p>
+								</div>
+								<div class="chart-wrap chart-wrap--small">
+									<canvas id="slaTipoChart" aria-label="Grafico SLA por tipo de atendimento"
+										role="img"></canvas>
+								</div>
+							</section>
+						</div>
+					</section>
+
+					<aside class="card analytics-card analytics-card--wide sla-side"
+						aria-label="Atendimentos em atraso">
+						<div class="card__title-wrap">
+							<h2>Atendimentos em Atraso (24h+)</h2>
+						</div>
+						<div class="clientes-pendentes-wrap clientes-pendentes-wrap--sla">
+							<div id="clientesPendentesLista" class="clientes-pendentes-lista"></div>
+						</div>
+					</aside>
+				</div>
+
+				<!-- Dashboard de causas e categorizacao dos atendimentos. -->
+				<div class="analytics-grid">
+					<section class="card analytics-card">
+						<div class="card__title-wrap">
+							<h2>Fechamentos por Motivo</h2>
+							<p id="motivoStatus" class="status">Aguardando importacao.</p>
+						</div>
+						<div class="support-incidencia-kpi">
+							<div class="support-incidencia-kpi__controls">
+								<label class="field support-incidencia-kpi__field">
+									<span>Base Total de Clientes</span>
+									<input id="baseClientesInput" type="number" min="1" step="1"
+										placeholder="Ex: 5000" />
+								</label>
+								<button id="calcLentidaoKpiBtn" class="secondary-button" type="button">Calcular
+									IncidÃªncia</button>
+							</div>
+							<div class="support-incidencia-kpi__result">
+								<span class="support-incidencia-kpi__label">IncidÃªncia de Suporte por LentidÃ£o</span>
+								<strong id="incidenciaLentidaoValue" class="support-incidencia-kpi__value">â€”</strong>
+								<span id="incidenciaLentidaoDetail" class="support-incidencia-kpi__detail">Informe a
+									base total
+									de clientes para calcular.</span>
+							</div>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="motivoChart" aria-label="Grafico de fechamentos por motivo" role="img"></canvas>
+						</div>
+					</section>
+					<section class="card analytics-card">
+						<div class="card__title-wrap">
+							<h2>Atendimentos por Tipo</h2>
+							<p id="tipoStatus" class="status">Aguardando importacao.</p>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="tipoChart" aria-label="Grafico de atendimentos por tipo" role="img"></canvas>
+						</div>
+					</section>
+				</div>
+
+				<section class="card analytics-card analytics-card--wide">
+					<div class="card__title-wrap">
+						<h2>Status dos Atendimentos Abertos</h2>
+						<p id="atendimentoStatusSummary" class="status">Aguardando importacao.</p>
+					</div>
+					<div id="atendimentoStatusCards" class="status-cards"></div>
+					<div class="status-dashboard-body">
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="atendimentoStatusChart" aria-label="Grafico status dos atendimentos"
+								role="img"></canvas>
+						</div>
+						<div class="status-abertos-wrap">
+							<h3 class="status-abertos__titulo">Aguardando Analise e Pendentes</h3>
+							<div id="statusAbertosLista" class="status-abertos-lista"></div>
+						</div>
+					</div>
+				</section>
+
+				<!-- Dashboard Produtividade por Atendente -->
+				<div class="analytics-grid analytics-grid--full">
+					<section class="card analytics-card analytics-card--wide">
+						<div class="card__title-wrap">
+							<h2>Quantidade por Plano de ServiÃ§o</h2>
+							<p id="planoServicoStatus" class="status">Aguardando importacao com coluna servico.</p>
+						</div>
+						<div id="planoServicoSummary" class="bairro-summary"></div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="planoServicoChart" aria-label="Grafico por plano de servico"
+								role="img"></canvas>
+						</div>
+					</section>
+					<section class="card analytics-card analytics-card--wide">
+						<div class="card__title-wrap">
+							<h2>Atendimentos por Cidade</h2>
+							<p id="cidadeStatus" class="status">Aguardando importacao com cidade.</p>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="cidadeChart" aria-label="Grafico por cidade" role="img"></canvas>
+						</div>
+					</section>
+				</div>
+
+				<section class="card analytics-card analytics-card--wide">
+					<div class="card__title-wrap">
+						<h2>Atendimentos por Bairro</h2>
+						<p id="bairroStatus" class="status">Aguardando importacao com bairro.</p>
+					</div>
+					<div id="bairroSummary" class="bairro-summary"></div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="bairroChart" aria-label="Grafico por bairro" role="img"></canvas>
+					</div>
+				</section>
+
+				<section class="card analytics-card analytics-card--wide">
+					<div class="card__title-wrap">
+						<h2>Mapa de Calor (Cidade x Mes)</h2>
+						<p id="cidadeHeatmapStatus" class="status">Aguardando importacao com cidade e mes.</p>
+					</div>
+					<div id="cidadeHeatmap" class="cidade-heatmap"></div>
+				</section>
+
+				<section class="card analytics-card analytics-card--wide">
+					<div class="card__title-wrap">
+						<h2>Clientes Recorrentes</h2>
+						<p id="recorrenteStatus" class="status">Aguardando importacao com nome_razaosocial e
+							numero_plano.</p>
+					</div>
+					<div id="recorrenteSummary" class="bairro-summary"></div>
+					<div class="recorrente-controls">
+						<label class="field recorrente-control__field">
+							<span>Buscar</span>
+							<input id="recorrenteSearch" type="text" placeholder="Cliente, plano, tipo ou usuario..." />
+						</label>
+						<label class="field recorrente-control__field">
+							<span>Ordenar por</span>
+							<select id="recorrenteSort">
+								<option value="quantidade-desc">Mais atendimentos</option>
+								<option value="quantidade-asc">Menos atendimentos</option>
+								<option value="cliente-asc">Cliente (A-Z)</option>
+								<option value="cliente-desc">Cliente (Z-A)</option>
+							</select>
+						</label>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="recorrentesChart" aria-label="Grafico de clientes recorrentes" role="img"></canvas>
+					</div>
+					<div class="table-wrap table-wrap--preview">
+						<table class="preview-table" aria-label="Tabela de clientes recorrentes">
+							<thead>
+								<tr>
+									<th>Cliente (Nome/Razao Social)</th>
+									<th>Numero do Plano</th>
+									<th>Qtd. Atendimentos</th>
+									<th>Tipo Atendimento</th>
+									<th>Usuario Abertura</th>
+									<th>Data Abertura</th>
+								</tr>
+							</thead>
+							<tbody id="recorrenteTableBody">
+								<tr>
+									<td colspan="6">Nenhum cliente recorrente encontrado.</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
+
+				<div class="analytics-grid analytics-grid--full">
+					<section class="card analytics-card analytics-card--wide">
+						<div class="card__title-wrap">
+							<h2>Produtividade por Atendente</h2>
+							<p id="produtividadeStatus" class="status">Aguardando importacao com usuario_fechamento.</p>
+						</div>
+						<div id="produtividadeSummary" class="produtividade-summary"></div>
+						<div class="chart-wrap chart-wrap--tall">
+							<canvas id="produtividadeChart" aria-label="Grafico produtividade por atendente"
+								role="img"></canvas>
+						</div>
+					</section>
+					<section class="card analytics-card analytics-card--wide">
+						<div class="card__title-wrap">
+							<h2>SLA Medio por Atendente</h2>
+							<p id="slaAtendentesStatus" class="status">Aguardando importacao.</p>
+						</div>
+						<div class="chart-wrap chart-wrap--tall">
+							<canvas id="slaAtendentesChart" aria-label="Grafico SLA medio por atendente"
+								role="img"></canvas>
+						</div>
+					</section>
+				</div>
+
+				<form id="manualForm" class="manual-entry" autocomplete="off">
+					<label class="field">
+						<span>Mes</span>
+						<input id="mesInput" type="text" placeholder="Ex: Jan" maxlength="20" />
+					</label>
+					<label class="field">
+						<span>Quantidade</span>
+						<input id="quantidadeInput" type="number" min="0" step="1" placeholder="Ex: 120" />
+					</label>
+					<button class="add-button" type="submit">Adicionar</button>
+				</form>
+				<div class="chart-wrap chart-wrap--elevated">
+					<canvas id="atendimentosChart" aria-label="Grafico mensal de atendimentos" role="img"></canvas>
+				</div>
+
+				<div class="analytics-grid analytics-grid--footer">
+					<section class="card analytics-card">
+						<div class="card__title-wrap">
+							<h2>Quantidade de Atendimentos por Dia</h2>
+							<div class="card__actions card__actions--compact">
+								<label class="periodo-filter" for="filterPeriodoDias">
+									<span>Periodo</span>
+									<select id="filterPeriodoDias" aria-label="Selecionar periodo em dias">
+										<option value="7">Ultimos 7 dias</option>
+										<option value="30" selected>Ultimos 30 dias</option>
+										<option value="90">Ultimos 90 dias</option>
+									</select>
+								</label>
+								<p id="atendimentosDiaStatus" class="status">Aguardando importacao com data e hora.</p>
+							</div>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="atendimentosDiaChart" aria-label="Grafico de atendimentos por dia"
+								role="img"></canvas>
+						</div>
+					</section>
+					<section class="card analytics-card">
+						<div class="card__title-wrap">
+							<h2>Quantidade de Atendimentos por Horario</h2>
+							<div class="card__actions card__actions--compact">
+								<label class="horario-filter" for="filterHorarioFaixa">
+									<span>Faixa</span>
+									<select id="filterHorarioFaixa" aria-label="Filtrar faixa de horario">
+										<option value="todos">Todos</option>
+										<option value="madrugada">Madrugada (00h-05h)</option>
+										<option value="manha">Manha (06h-11h)</option>
+										<option value="tarde">Tarde (12h-17h)</option>
+										<option value="noite">Noite (18h-23h)</option>
+									</select>
+								</label>
+								<p id="atendimentosHorarioStatus" class="status">Aguardando importacao com data e hora.
+								</p>
+							</div>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="atendimentosHorarioChart" aria-label="Grafico de atendimentos por horario"
+								role="img"></canvas>
+						</div>
+					</section>
+				</div>
+			</section>
+			</div>
+		</section>
+
+		<section id="panelChat" class="dashboard-panel" aria-labelledby="tabChat" hidden>
+			<div class="dashboard__export-buttons" style="display:flex;gap:10px;margin:10px 0;justify-content:center;">
+				<button id="chatExportPdfBtn" class="add-button" type="button" title="Exportar para PDF">â¬‡
+					PDF</button>
+				<button id="chatExportPptxBtn" class="add-button" type="button" title="Exportar para PowerPoint">â¬‡
+					PPTX</button>
+			</div>
+			<div class="semantic-legend" aria-label="Legenda de cores">
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--ok"></span>Bom</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--info"></span>Informativo</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--warn"></span>Atencao</span>
+				<span class="semantic-legend__item"><span
+						class="semantic-legend__dot semantic-legend__dot--critical"></span>Critico</span>
+			</div>
+
+			<section class="card">
+				<div class="card__title-wrap">
+					<h2>Importar Relatorio de Chat</h2>
+					<p id="chatStatus" class="status" role="status" aria-live="polite">Nenhum dado carregado.</p>
+				</div>
+				<div class="chat-import-wrap">
+					<div class="import-entry__header">
+						<div>
+							<h3>Importacao em lote</h3>
+							<p>Selecione o CSV analitico e, opcionalmente, o XLSX estatistico exportados pelo sistema de
+								chat.</p>
+						</div>
+						<label class="file-picker">
+							<input id="chatArquivoInput" type="file"
+								accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+								multiple />
+							<span>Selecionar arquivos</span>
+						</label>
+					</div>
+					<div class="import-entry__actions">
+						<button id="chatImportButton" class="add-button" type="button">Importar arquivo(s)</button>
+						<button id="chatClearButton" class="secondary-button" type="button">Limpar dados</button>
+					</div>
+					<p id="chatFileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
+						selecionado.</p>
+				</div>
+			</section>
+
+			<section class="card" id="chatKpiSection">
+				<div class="card__title-wrap">
+					<h2>Visao Geral</h2>
+					<p id="chatKpiStatus" class="status">Aguardando importacao.</p>
+				</div>
+				<div class="kpi-grid" id="chatKpiGrid">
+					<div class="kpi-card"><span class="kpi-card__label">Total de Chats</span><span
+							class="kpi-card__value" id="kpiTotal">â€”</span></div>
+					<div class="kpi-card kpi-card--ok"><span class="kpi-card__label">Finalizados</span><span
+							class="kpi-card__value" id="kpiFinalizados">â€”</span><span class="kpi-card__sub"
+							id="kpiFinalizadosPct">â€”</span></div>
+					<div class="kpi-card kpi-card--info"><span class="kpi-card__label">Em Atendimento</span><span
+							class="kpi-card__value" id="kpiEmAtendimento">â€”</span></div>
+					<div class="kpi-card kpi-card--warn"><span class="kpi-card__label">Automaticos</span><span
+							class="kpi-card__value" id="kpiAutomatico">â€”</span></div>
+					<div class="kpi-card"><span class="kpi-card__label">TM Fila</span><span class="kpi-card__value"
+							id="kpiTmFila">â€”</span><span class="kpi-card__sub">Tempo medio em fila</span></div>
+					<div class="kpi-card"><span class="kpi-card__label">TM Atendimento</span><span
+							class="kpi-card__value" id="kpiTmAtend">â€”</span><span class="kpi-card__sub">Tempo medio de
+							atend.</span></div>
+					<div class="kpi-card"><span class="kpi-card__label">TMIC</span><span class="kpi-card__value"
+							id="kpiTmic">â€”</span><span class="kpi-card__sub">1a mensagem do agente</span></div>
+					<div class="kpi-card kpi-card--warn"><span class="kpi-card__label">Recorrentes</span><span
+							class="kpi-card__value" id="kpiRecorrentes">â€”</span><span class="kpi-card__sub"
+							id="kpiRecorrentesPct">â€”</span></div>
+				</div>
+			</section>
+
+			<section class="card" id="chatFiltrosSection" style="display:none;">
+				<div class="card__title-wrap">
+					<h2>Filtros de Analise</h2>
+				</div>
+				<div class="import-entry">
+					<div class="mapping-grid">
+						<label class="mapping-field mapping-field--filter" data-multiselect="true">
+							<span>Agente</span>
+							<input id="chatFiltroAgenteSearch" class="filter-search" type="text"
+								placeholder="Buscar agente..." />
+							<div id="chatFiltroAgenteOptions" class="filter-options"></div>
+							<select id="chatFiltroAgente" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de agentes, selecione um ou mais"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter" data-multiselect="true">
+							<span>Servico</span>
+							<input id="chatFiltroServicoSearch" class="filter-search" type="text"
+								placeholder="Buscar serviÃ§o..." />
+							<div id="chatFiltroServicoOptions" class="filter-options"></div>
+							<select id="chatFiltroServico" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de serviÃ§os, selecione um ou mais"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter" data-multiselect="true">
+							<span>Status</span>
+							<input id="chatFiltroStatusSearch" class="filter-search" type="text"
+								placeholder="Buscar status..." />
+							<div id="chatFiltroStatusOptions" class="filter-options"></div>
+							<select id="chatFiltroStatus" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de status, selecione um ou mais"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter" data-multiselect="true">
+							<span>Tipo</span>
+							<input id="chatFiltroTipoSearch" class="filter-search" type="text"
+								placeholder="Buscar tipo..." />
+							<div id="chatFiltroTipoOptions" class="filter-options"></div>
+							<select id="chatFiltroTipo" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de tipos, selecione um ou mais"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter" data-multiselect="true">
+							<span>Recorrencia</span>
+							<input id="chatFiltroRecorrenciaSearch" class="filter-search" type="text"
+								placeholder="Buscar recorrÃªncia..." />
+							<div id="chatFiltroRecorrenciaOptions" class="filter-options"></div>
+							<select id="chatFiltroRecorrencia" class="filter-select filter-select--hidden" multiple
+								size="6" aria-label="Filtro de recorrÃªncia, selecione um ou mais"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter" data-multiselect="true">
+							<span>Ativo/Receptivo</span>
+							<input id="chatFiltroModoSearch" class="filter-search" type="text"
+								placeholder="Buscar modo..." />
+							<div id="chatFiltroModoOptions" class="filter-options"></div>
+							<select id="chatFiltroModo" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de modo, selecione um ou mais"></select>
+						</label>
+						<label class="mapping-field">
+							<span>Periodo</span>
+							<select id="chatFiltroPeriodo" aria-label="Filtro de perÃ­odo">
+								<option value="todos">Todo periodo</option>
+								<option value="7">Ultimos 7 dias</option>
+								<option value="30" selected>Ultimos 30 dias</option>
+								<option value="90">Ultimos 90 dias</option>
+							</select>
+						</label>
+						<button id="chatAplicarFiltros" class="add-button" type="button">Filtrar</button>
+						<button id="chatLimparFiltros" class="secondary-button" type="button">Limpar</button>
+					</div>
+				</div>
+			</section>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card analytics-card--wide">
+					<div class="card__title-wrap">
+						<h2>Curva de Chats por Mes</h2>
+						<p id="chatCurvaStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatCurvaChart" aria-label="Curva de chats por mes" role="img"></canvas>
+					</div>
+				</section>
+				<section class="card analytics-card analytics-card--wide">
+					<div class="card__title-wrap">
+						<h2>Chats por Dia da Semana</h2>
+						<p id="chatDiaSemanaStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatDiaSemanaChart" aria-label="Chats por dia da semana" role="img"></canvas>
+					</div>
+				</section>
+			</div>
+
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Top Agentes por Volume</h2>
+					<p id="chatAgentesStatus" class="status">Aguardando importacao.</p>
+				</div>
+				<div id="chatAgentesRank" class="agente-rank-list">
+					<div class="chat-empty">
+						<div class="chat-empty__icon">&#128100;</div>Nenhum agente carregado ainda.
+					</div>
+				</div>
+				<div class="chart-wrap chart-wrap--small" style="margin-top:16px;">
+					<canvas id="chatAgentesChart" aria-label="Grafico top agentes" role="img"></canvas>
+				</div>
+			</section>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Distribuicao por Status</h2>
+						<p id="chatStatusDistStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatStatusChart" aria-label="Distribuicao por status" role="img"></canvas>
+					</div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Distribuicao por Tipo</h2>
+						<p id="chatTipoStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatTipoChart" aria-label="Distribuicao por tipo" role="img"></canvas>
+					</div>
+				</section>
+			</div>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Chats por Servico (Fila)</h2>
+						<p id="chatServicoStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatServicoChart" aria-label="Chats por servico" role="img"></canvas>
+					</div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Classificacao dos Atendimentos</h2>
+						<p id="chatClassifStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatClassifChart" aria-label="Classificacao dos atendimentos" role="img"></canvas>
+					</div>
+				</section>
+			</div>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Ativo vs Receptivo</h2>
+						<p id="chatModoStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatModoChart" aria-label="Ativo vs Receptivo" role="img"></canvas>
+					</div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Recorrencia de Contatos</h2>
+						<p id="chatRecorrenciaStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatRecorrenciaChart" aria-label="Recorrencia de contatos" role="img"></canvas>
+					</div>
+				</section>
+			</div>
+
+			<section class="card analytics-card analytics-card--wide recorrencia-contatos-section">
+				<div class="card__title-wrap">
+					<h2>Contatos por Tipo de Recorrencia</h2>
+					<p class="status">Top 10 por categoria com paginaÃ§Ã£o.</p>
+				</div>
+				<div class="recorrencia-contatos-grid" aria-label="Contatos por categoria de recorrÃªncia">
+					<article class="recorrencia-contatos-card">
+						<h3>Reincidente <span class="indicador-help"
+								title="Cliente voltou a relatar o mesmo problema jÃ¡ atendido anteriormente."
+								tabindex="0">?</span></h3>
+						<p id="chatRecorrenciaReincidenteMeta" class="recorrencia-contatos-meta">0 contato(s)</p>
+						<ul id="chatRecorrenciaReincidenteList" class="recorrencia-contatos-list">
+							<li class="recorrencia-contatos-empty">Sem contatos.</li>
+						</ul>
+						<div class="recorrencia-contatos-pagination">
+							<button id="chatRecorrenciaReincidentePrev" class="recorrencia-page-btn"
+								type="button">Anterior</button>
+							<span id="chatRecorrenciaReincidentePage" class="recorrencia-page-label">Pagina 1 de
+								1</span>
+							<button id="chatRecorrenciaReincidenteNext" class="recorrencia-page-btn"
+								type="button">Proxima</button>
+						</div>
+					</article>
+					<article class="recorrencia-contatos-card">
+						<h3>Recorrente <span class="indicador-help"
+								title="Problema acontece com frequÃªncia, mesmo apÃ³s atendimentos."
+								tabindex="0">?</span>
+						</h3>
+						<p id="chatRecorrenciaRecorrenteMeta" class="recorrencia-contatos-meta">0 contato(s)</p>
+						<ul id="chatRecorrenciaRecorrenteList" class="recorrencia-contatos-list">
+							<li class="recorrencia-contatos-empty">Sem contatos.</li>
+						</ul>
+						<div class="recorrencia-contatos-pagination">
+							<button id="chatRecorrenciaRecorrentePrev" class="recorrencia-page-btn"
+								type="button">Anterior</button>
+							<span id="chatRecorrenciaRecorrentePage" class="recorrencia-page-label">Pagina 1 de 1</span>
+							<button id="chatRecorrenciaRecorrenteNext" class="recorrencia-page-btn"
+								type="button">Proxima</button>
+						</div>
+					</article>
+					<article class="recorrencia-contatos-card">
+						<h3>Rechamada <span class="indicador-help"
+								title="Cliente entrou em contato novamente sobre um atendimento recente."
+								tabindex="0">?</span></h3>
+						<p id="chatRecorrenciaRechamadaMeta" class="recorrencia-contatos-meta">0 contato(s)</p>
+						<ul id="chatRecorrenciaRechamadaList" class="recorrencia-contatos-list">
+							<li class="recorrencia-contatos-empty">Sem contatos.</li>
+						</ul>
+						<div class="recorrencia-contatos-pagination">
+							<button id="chatRecorrenciaRechamadaPrev" class="recorrencia-page-btn"
+								type="button">Anterior</button>
+							<span id="chatRecorrenciaRechamadaPage" class="recorrencia-page-label">Pagina 1 de 1</span>
+							<button id="chatRecorrenciaRechamadaNext" class="recorrencia-page-btn"
+								type="button">Proxima</button>
+						</div>
+					</article>
+				</div>
+			</section>
+
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Tempos Medios por Agente</h2>
+					<p id="chatTemposStatus" class="status">Aguardando importacao.</p>
+				</div>
+				<div class="chart-wrap chart-wrap--tall">
+					<canvas id="chatTemposChart" aria-label="Tempos medios por agente" role="img"></canvas>
+				</div>
+			</section>
+
+			<div class="analytics-grid analytics-grid--footer">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Chats por Horario do Dia</h2>
+						<p id="chatHorarioStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatHorarioChart" aria-label="Chats por horario" role="img"></canvas>
+					</div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Volume por Canal</h2>
+						<p id="chatCanalStatus" class="status">Aguardando importacao.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small">
+						<canvas id="chatCanalChart" aria-label="Volume por canal" role="img"></canvas>
+					</div>
+				</section>
+			</div>
+
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Resumo de Tempos por Agente</h2>
+					<p id="chatTabelaTemposStatus" class="status">Aguardando importacao.</p>
+				</div>
+				<div class="table-wrap table-wrap--preview">
+					<table class="time-table" id="chatTabelaTempos" aria-label="Tempos por agente">
+						<thead>
+							<tr>
+								<th>Agente</th>
+								<th>Qtd. Chats</th>
+								<th title="TM Fila: tempo mÃ©dio que o cliente aguarda na fila atÃ© ser atendido."
+									aria-label="TM Fila: tempo mÃ©dio que o cliente aguarda na fila atÃ© ser atendido.">
+									TM
+									Fila</th>
+								<th title="TM Atendimento: tempo mÃ©dio total do atendimento atÃ© a finalizaÃ§Ã£o."
+									aria-label="TM Atendimento: tempo mÃ©dio total do atendimento atÃ© a finalizaÃ§Ã£o.">
+									TM
+									Atendimento</th>
+								<th title="TMIC: tempo mÃ©dio para a primeira interaÃ§Ã£o do colaborador com o cliente."
+									aria-label="TMIC: tempo mÃ©dio para a primeira interaÃ§Ã£o do colaborador com o cliente.">
+									TMIC</th>
+								<th title="TMIA: tempo mÃ©dio entre interaÃ§Ãµes durante o atendimento."
+									aria-label="TMIA: tempo mÃ©dio entre interaÃ§Ãµes durante o atendimento.">TMIA</th>
+								<th>Finaliz.</th>
+								<th>% Finaliz.</th>
+							</tr>
+						</thead>
+						<tbody id="chatTabelaTemposBody">
+							<tr>
+								<td colspan="8" style="text-align:center;padding:24px;color:#94a3b8;">Nenhum dado
+									carregado.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</section>
+
+		<section id="panelAtendimentos" class="dashboard-panel" aria-labelledby="tabAtendimentos" hidden>
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Aguardando Reagendamento</h2>
+					<p id="reagendamentoStatus" class="status">Importe os arquivos de Atendimentos e OS na aba Hubsoft para ver esta lista.</p>
+				</div>
+				<p style="font-size:0.8rem;color:var(--muted);margin:-6px 0 12px;">Atendimentos cuja ordem de servico foi agendada antes da data atual e continua com status "aguardando_agendamento" (ou seja, o tecnico precisou reagendar).</p>
+				<div class="status-abertos-wrap">
+					<div id="reagendamentoLista" class="status-abertos-lista"></div>
+				</div>
+			</section>
+
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Atendimentos Finalizados</h2>
+					<p id="atendimentosFinalizadosStatus" class="status">Importe os arquivos de Atendimentos e OS na aba Hubsoft para ver esta lista.</p>
+				</div>
+				<div class="status-abertos-wrap">
+					<div id="atendimentosFinalizadosLista" class="status-abertos-lista"></div>
+				</div>
+			</section>
+		</section>
+
+		<section id="panelNps" class="dashboard-panel" aria-labelledby="tabNps" hidden>
+			<section class="card nps-hero-card">
+				<div class="card__title-wrap">
+					<div>
+						<p class="eyebrow">Cancelamentos de ServiÃ§o</p>
+						<h2>Dashboard de Cancelamentos</h2>
+						<p class="subtitle">Analise motivos, serviÃ§os cancelados, cidades, bairros e longevidade dos
+							clientes que saÃ­ram.</p>
+					</div>
+					<p id="npsStatus" class="status" role="status" aria-live="polite">Importe o relatÃ³rio de
+						cancelamentos (CSV ou XLSX) para iniciar a anÃ¡lise.</p>
+				</div>
+				<div class="import-entry">
+					<div class="import-entry__header">
+						<div>
+							<h3>ImportaÃ§Ã£o do relatÃ³rio de cancelamentos</h3>
+							<p>Use o relatÃ³rio exportado do Hubsoft com as colunas: <strong>codigo_cliente,
+									nome_razaosocial, data_cancelamento, motivo_cancelamento, servico, bairro, cidade,
+									data_cadastro</strong>.</p>
+						</div>
+						<label class="file-picker">
+							<input id="npsArquivoInput" type="file"
+								accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+							<span>Selecionar arquivo</span>
+						</label>
+					</div>
+					<div class="import-entry__actions">
+						<button id="npsImportButton" class="add-button" type="button">Importar relatÃ³rio</button>
+						<button id="npsClearButton" class="secondary-button" type="button">Limpar dados</button>
+					</div>
+					<p id="npsFileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
+						selecionado.</p>
+				</div>
+				<div class="filter-toggle-wrap">
+					<button id="npsToggleFilterSectionButton" class="secondary-button" type="button"
+						aria-expanded="false" aria-controls="npsFilterSection" disabled>Filtros de AnÃ¡lise</button>
+				</div>
+				<div id="npsFilterSection" class="import-entry filter-section--hidden">
+					<div class="import-entry__header">
+						<h3>Filtros de AnÃ¡lise</h3>
+						<p>Filtre os cancelamentos por usuÃ¡rio de cancelamento, motivo, serviÃ§o, cidade, bairro e mÃªs
+							para anÃ¡lises direcionadas.</p>
+					</div>
+					<div class="mapping-grid">
+						<label class="mapping-field mapping-field--filter">
+							<span>UsuÃ¡rio de Cancelamento</span>
+							<input id="npsFilterUsuarioCancelamentoSearch" class="filter-search" type="text"
+								placeholder="Buscar usuÃ¡rio..." />
+							<div id="npsFilterUsuarioCancelamentoOptions" class="filter-options"></div>
+							<select id="npsFilterUsuarioCancelamento" class="filter-select filter-select--hidden"
+								multiple size="6" aria-label="Filtro de usuÃ¡rios de cancelamento"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>Motivo</span>
+							<input id="npsFilterMotivoSearch" class="filter-search" type="text"
+								placeholder="Buscar motivo..." />
+							<div id="npsFilterMotivoOptions" class="filter-options"></div>
+							<select id="npsFilterMotivo" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de motivos de cancelamento"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>ServiÃ§o</span>
+							<input id="npsFilterServicoSearch" class="filter-search" type="text"
+								placeholder="Buscar serviÃ§o..." />
+							<div id="npsFilterServicoOptions" class="filter-options"></div>
+							<select id="npsFilterServico" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de serviÃ§os cancelados"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>Cidade</span>
+							<input id="npsFilterCidadeSearch" class="filter-search" type="text"
+								placeholder="Buscar cidade..." />
+							<div id="npsFilterCidadeOptions" class="filter-options"></div>
+							<select id="npsFilterCidade" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de cidades"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>Bairro</span>
+							<input id="npsFilterBairroSearch" class="filter-search" type="text"
+								placeholder="Buscar bairro..." />
+							<div id="npsFilterBairroOptions" class="filter-options"></div>
+							<select id="npsFilterBairro" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de bairros"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>MÃªs</span>
+							<input id="npsFilterMesSearch" class="filter-search" type="text"
+								placeholder="Buscar mÃªs..." />
+							<div id="npsFilterMesOptions" class="filter-options"></div>
+							<select id="npsFilterMes" class="filter-select filter-select--hidden" multiple size="6"
+								aria-label="Filtro de meses"></select>
+						</label>
+						<button id="npsApplyFiltersBtn" class="add-button" type="button">Filtrar Dados</button>
+						<button id="npsClearFiltersBtn" class="secondary-button" type="button">Limpar Filtros</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- KPIs principais -->
+			<section class="card">
+				<div class="card__title-wrap">
+					<h2>KPIs de Cancelamento</h2>
+					<p class="status">Volume total, principal motivo, serviÃ§o mais cancelado e longevidade mÃ©dia dos
+						clientes perdidos.</p>
+				</div>
+				<div class="nps-pillars-grid">
+					<article class="nps-pillar-card nps-pillar-card--volume">
+						<h3>&#128202; Volume</h3>
+						<div class="nps-metric-list">
+							<div class="nps-metric">
+								<span class="nps-metric__label">Total cancelamentos</span>
+								<strong id="canc-total" class="nps-metric__value">â€”</strong>
+							</div>
+							<div class="nps-metric">
+								<span class="nps-metric__label">Principal motivo</span>
+								<strong id="canc-top-motivo" class="nps-metric__value">â€”</strong>
+							</div>
+							<div class="nps-metric">
+								<span class="nps-metric__label">Cidade com mais cancelamentos</span>
+								<strong id="canc-top-cidade" class="nps-metric__value">â€”</strong>
+							</div>
+						</div>
+					</article>
+					<article class="nps-pillar-card nps-pillar-card--sla">
+						<h3>&#128230; Serviço</h3>
+						<div class="nps-metric-list">
+							<div class="nps-metric">
+								<span class="nps-metric__label">ServiÃ§o mais cancelado</span>
+								<strong id="canc-top-servico" class="nps-metric__value">â€”</strong>
+							</div>
+							<div class="nps-metric">
+								<span class="nps-metric__label">InadimplÃªncia</span>
+								<strong id="canc-pct-inadimplencia" class="nps-metric__value">â€”</strong>
+							</div>
+							<div class="nps-metric">
+								<span class="nps-metric__label">MudanÃ§a de Cidade</span>
+								<strong id="canc-pct-mudanca-cidade" class="nps-metric__value">â€”</strong>
+							</div>
+						</div>
+					</article>
+					<article class="nps-pillar-card nps-pillar-card--team">
+						<h3>&#128100; Cliente</h3>
+						<div class="nps-metric-list">
+							<div class="nps-metric">
+								<span class="nps-metric__label">Longevidade mÃ©dia</span>
+								<strong id="canc-long-media" class="nps-metric__value">â€”</strong>
+							</div>
+							<div class="nps-metric">
+								<span class="nps-metric__label">InsatisfaÃ§Ã£o</span>
+								<strong id="canc-pct-insatisfacao" class="nps-metric__value">â€”</strong>
+							</div>
+						</div>
+					</article>
+					<article class="nps-pillar-card nps-pillar-card--health">
+						<h3>&#128205; Localização</h3>
+						<div class="nps-metric-list">
+							<div class="nps-metric">
+								<span class="nps-metric__label">Cidades atendidas</span>
+								<strong id="canc-total-cidades" class="nps-metric__value">â€”</strong>
+							</div>
+							<div class="nps-metric">
+								<span class="nps-metric__label">Bairros impactados</span>
+								<strong id="canc-total-bairros" class="nps-metric__value">â€”</strong>
+							</div>
+						</div>
+					</article>
+				</div>
+			</section>
+
+			<section class="card nps-cancelamento-card">
+				<div class="card__title-wrap">
+					<h2>InformaÃ§Ãµes do Cancelamento</h2>
+					<p id="npsCancelamentoStatus" class="status">Selecione ou importe os cancelamentos para visualizar o
+						registro em destaque.</p>
+				</div>
+				<div class="nps-cancelamento-grid">
+					<div class="nps-cancelamento-field nps-cancelamento-field--wide">
+						<span class="nps-cancelamento-label">nome_razaosocial</span>
+						<strong id="npsCancelamentoNome" class="nps-cancelamento-value">â€”</strong>
+					</div>
+					<div class="nps-cancelamento-field">
+						<span class="nps-cancelamento-label">motivo_cancelamento</span>
+						<strong id="npsCancelamentoMotivo" class="nps-cancelamento-value">â€”</strong>
+					</div>
+					<div class="nps-cancelamento-field">
+						<span class="nps-cancelamento-label">data_habilitacao</span>
+						<strong id="npsCancelamentoDataHabilitacao" class="nps-cancelamento-value">â€”</strong>
+					</div>
+					<div class="nps-cancelamento-field nps-cancelamento-field--wide">
+						<span class="nps-cancelamento-label">obs_cancelamento</span>
+						<p id="npsCancelamentoObs" class="nps-cancelamento-text">â€”</p>
+					</div>
+				</div>
+				<div class="nps-cancelamento-list-card">
+					<div class="card__title-wrap card__title-wrap--compact">
+						<div>
+							<h3>Ãšltimos Cancelamentos</h3>
+							<p class="status">Clique em um item para trocar o destaque acima.</p>
+						</div>
+						<p id="npsCancelamentoListaStatus" class="status">0 itens</p>
+					</div>
+					<div id="npsCancelamentoLista" class="nps-cancelamento-list"></div>
+					<div class="nps-cancelamento-paginacao">
+						<button id="npsCancelamentoPaginaAnterior" class="secondary-button"
+							type="button">Anterior</button>
+						<span id="npsCancelamentoPaginaLabel" class="status">PÃ¡gina 0 de 0</span>
+						<button id="npsCancelamentoPaginaProxima" class="secondary-button"
+							type="button">PrÃ³xima</button>
+					</div>
+				</div>
+			</section>
+
+			<section class="card nps-churn-card">
+				<div class="card__title-wrap">
+					<h2>Calculadora de Churn Rate</h2>
+					<p id="churnCalcStatus" class="status">Informe os valores manualmente para calcular a Taxa de
+						EvasÃ£o
+						de Clientes.</p>
+				</div>
+				<div class="nps-churn-grid">
+					<label class="field">
+						<span>Clientes no inÃ­cio do perÃ­odo</span>
+						<input id="churnInicioInput" type="number" min="0" step="1" placeholder="Ex: 1200" />
+					</label>
+					<label class="field">
+						<span>Cancelamentos EvitÃ¡veis (CrÃ­tico)</span>
+						<input id="churnEvitavelInput" type="number" min="0" step="1" placeholder="Ex: 18" />
+					</label>
+					<label class="field">
+						<span>Cancelamentos InevitÃ¡veis (InvoluntÃ¡rio)</span>
+						<input id="churnInevitavelInput" type="number" min="0" step="1" placeholder="Ex: 7" />
+					</label>
+				</div>
+				<div class="import-entry__actions">
+					<button id="churnCalcBtn" class="add-button" type="button">Calcular Churn</button>
+					<button id="churnClearBtn" class="secondary-button" type="button">Limpar</button>
+				</div>
+				<div class="nps-churn-result" aria-live="polite">
+					<div class="nps-metric">
+						<span class="nps-metric__label">1. Churn Bruto (Total)</span>
+						<strong id="churnBrutoValue" class="nps-metric__value">â€”</strong>
+					</div>
+					<div class="nps-metric">
+						<span class="nps-metric__label">2. Churn EvitÃ¡vel (CrÃ­tico)</span>
+						<strong id="churnEvitavelValue" class="nps-metric__value">â€”</strong>
+					</div>
+					<div class="nps-metric">
+						<span class="nps-metric__label">3. Churn InevitÃ¡vel (InvoluntÃ¡rio)</span>
+						<strong id="churnInevitavelValue" class="nps-metric__value">â€”</strong>
+					</div>
+				</div>
+			</section>
+
+			<!-- GrÃ¡ficos -->
+			<div class="nps-charts-grid">
+				<section class="card chart-card nps-chart-card">
+					<h2>Motivos de Cancelamento</h2>
+					<canvas id="cancMotivoChart" aria-label="GrÃ¡fico de motivos de cancelamento" role="img"></canvas>
+				</section>
+				<section class="card chart-card nps-chart-card">
+					<h2>ServiÃ§os Cancelados</h2>
+					<canvas id="cancServicoChart" aria-label="GrÃ¡fico de distribuiÃ§Ã£o por serviÃ§o"
+						role="img"></canvas>
+				</section>
+				<section class="card chart-card nps-chart-card">
+					<h2>Cancelamentos por Cidade</h2>
+					<canvas id="cancCidadeChart" aria-label="GrÃ¡fico de cancelamentos por cidade" role="img"></canvas>
+				</section>
+				<section class="card chart-card nps-chart-card">
+					<h2>Longevidade dos Clientes</h2>
+					<canvas id="cancLongevidadeChart" aria-label="GrÃ¡fico de longevidade dos clientes cancelados"
+						role="img"></canvas>
+				</section>
+				<section class="card chart-card nps-chart-card">
+					<h2>Cancelamentos por MÃªs</h2>
+					<canvas id="cancMensalChart" aria-label="GrÃ¡fico de cancelamentos por mÃªs" role="img"></canvas>
+				</section>
+				<section class="card chart-card nps-chart-card">
+					<h2>Top Bairros</h2>
+					<canvas id="cancBairroChart" aria-label="GrÃ¡fico de cancelamentos por bairro" role="img"></canvas>
+				</section>
+			</div>
+
+			<!-- Ranking de motivos -->
+			<section class="card nps-ranking-card">
+				<div class="card__title-wrap">
+					<h2>Ranking de Motivos</h2>
+					<p class="status">DistribuiÃ§Ã£o completa dos motivos de cancelamento com percentual sobre o total.
+					</p>
+				</div>
+				<div id="cancRankingMotivos" class="nps-ranking-list"></div>
+			</section>
+		</section>
+
+		<section id="panelPesquisa" class="dashboard-panel" aria-labelledby="tabPesquisa" hidden>
+			<section class="card nps-hero-card">
+				<div class="card__title-wrap">
+					<div>
+						<p class="eyebrow">Pesquisa de SatisfaÃ§Ã£o</p>
+						<h2>Dashboard de Pesquisa (CSAT)</h2>
+						<p class="subtitle">Acompanhe satisfaÃ§Ã£o, performance de agentes, operaÃ§Ã£o, eficiÃªncia de
+							tempo
+							e auditoria de notas baixas.</p>
+					</div>
+					<p id="pesquisaStatus" class="status" role="status" aria-live="polite">Importe o relatÃ³rio de
+						pesquisa (CSV ou XLSX) para iniciar.</p>
+				</div>
+				<div class="import-entry">
+					<div class="import-entry__header">
+						<div>
+							<h3>ImportaÃ§Ã£o do relatÃ³rio de pesquisa</h3>
+							<p>Colunas esperadas: <strong>Data, Entrada, OpÃ§Ã£o, Resposta, Agente, ServiÃ§o,
+									ClassificaÃ§Ã£o, Canal, Protocolo/Cod., Nome e Telefone</strong>.</p>
+						</div>
+						<label class="file-picker">
+							<input id="pesquisaArquivoInput" type="file"
+								accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+							<span>Selecionar arquivo</span>
+						</label>
+					</div>
+					<div class="import-entry__actions">
+						<button id="pesquisaImportButton" class="add-button" type="button">Importar relatÃ³rio</button>
+						<button id="pesquisaClearButton" class="secondary-button" type="button">Limpar dados</button>
+					</div>
+					<p id="pesquisaFileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
+						selecionado.</p>
+				</div>
+				<div class="filter-toggle-wrap">
+					<button id="pesquisaToggleFilterSectionButton" class="secondary-button" type="button"
+						aria-expanded="false" aria-controls="pesquisaFilterSection" disabled>Filtros de
+						AnÃ¡lise</button>
+				</div>
+				<div id="pesquisaFilterSection" class="import-entry filter-section--hidden">
+					<div class="import-entry__header">
+						<h3>Filtros de AnÃ¡lise</h3>
+						<p>Filtre por agente, serviÃ§o, classificaÃ§Ã£o, canal, nota e data para anÃ¡lises direcionadas.
+						</p>
+					</div>
+					<div class="mapping-grid">
+						<label class="mapping-field mapping-field--filter">
+							<span>Agente</span>
+							<input id="pesquisaFilterAgenteSearch" class="filter-search" type="text"
+								placeholder="Buscar agente..." />
+							<div id="pesquisaFilterAgenteOptions" class="filter-options"></div>
+							<select id="pesquisaFilterAgente" class="filter-select filter-select--hidden" multiple
+								size="6" aria-label="Filtro de agente"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>ServiÃ§o</span>
+							<input id="pesquisaFilterServicoSearch" class="filter-search" type="text"
+								placeholder="Buscar serviÃ§o..." />
+							<div id="pesquisaFilterServicoOptions" class="filter-options"></div>
+							<select id="pesquisaFilterServico" class="filter-select filter-select--hidden" multiple
+								size="6" aria-label="Filtro de serviÃ§o"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>ClassificaÃ§Ã£o</span>
+							<input id="pesquisaFilterClassificacaoSearch" class="filter-search" type="text"
+								placeholder="Buscar classificaÃ§Ã£o..." />
+							<div id="pesquisaFilterClassificacaoOptions" class="filter-options"></div>
+							<select id="pesquisaFilterClassificacao" class="filter-select filter-select--hidden"
+								multiple size="6" aria-label="Filtro de classificaÃ§Ã£o"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>Canal</span>
+							<input id="pesquisaFilterCanalSearch" class="filter-search" type="text"
+								placeholder="Buscar canal..." />
+							<div id="pesquisaFilterCanalOptions" class="filter-options"></div>
+							<select id="pesquisaFilterCanal" class="filter-select filter-select--hidden" multiple
+								size="6" aria-label="Filtro de canal"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>Nota (OpÃ§Ã£o)</span>
+							<input id="pesquisaFilterNotaSearch" class="filter-search" type="text"
+								placeholder="Buscar nota..." />
+							<div id="pesquisaFilterNotaOptions" class="filter-options"></div>
+							<select id="pesquisaFilterNota" class="filter-select filter-select--hidden" multiple
+								size="6" aria-label="Filtro de nota"></select>
+						</label>
+						<label class="mapping-field mapping-field--filter">
+							<span>Data</span>
+							<input id="pesquisaFilterDataSearch" class="filter-search" type="text"
+								placeholder="Buscar data..." />
+							<div id="pesquisaFilterDataOptions" class="filter-options"></div>
+							<select id="pesquisaFilterData" class="filter-select filter-select--hidden" multiple
+								size="6" aria-label="Filtro de data"></select>
+						</label>
+						<button id="pesquisaApplyFiltersBtn" class="add-button" type="button">Filtrar Dados</button>
+						<button id="pesquisaClearFiltersBtn" class="secondary-button" type="button">Limpar
+							Filtros</button>
+					</div>
+				</div>
+			</section>
+
+			<section class="card">
+				<div class="card__title-wrap">
+					<h2>Resumo Executivo</h2>
+					<p class="status">Principais indicadores de satisfaÃ§Ã£o, volume e eficiÃªncia.</p>
+				</div>
+				<div class="pesquisa-kpi-grid">
+					<div class="kpi-card"><span class="kpi-card__label">Nota MÃ©dia (CSAT)</span><span
+							id="pesquisaKpiNotaMedia" class="kpi-card__value">â€”</span></div>
+					<div class="kpi-card"><span class="kpi-card__label">Total de AvaliaÃ§Ãµes</span><span
+							id="pesquisaKpiTotal" class="kpi-card__value">â€”</span></div>
+					<div class="kpi-card kpi-card--warn"><span class="kpi-card__label">Sem Agente
+							Identificado</span><span id="pesquisaKpiSemAgente" class="kpi-card__value">â€”</span></div>
+					<div class="kpi-card kpi-card--info"><span class="kpi-card__label">Tempo MÃ©dio de
+							Atendimento</span><span id="pesquisaKpiTempoMedio" class="kpi-card__value">â€”</span></div>
+				</div>
+			</section>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>DistribuiÃ§Ã£o de AvaliaÃ§Ãµes</h2>
+						<p id="pesquisaDistribuicaoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaDistribuicaoChart"
+							aria-label="DistribuiÃ§Ã£o de avaliaÃ§Ãµes" role="img"></canvas></div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>EvoluÃ§Ã£o por Data</h2>
+						<div class="card__actions card__actions--compact">
+							<label class="periodo-filter">
+								<span>VisÃ£o</span>
+								<select id="pesquisaEvolucaoAgrupamento" aria-label="Selecionar visÃ£o da evoluÃ§Ã£o">
+									<option value="dia">Por dia</option>
+									<option value="mes">Por mÃªs</option>
+								</select>
+							</label>
+							<label class="periodo-filter" id="pesquisaEvolucaoMesWrap">
+								<span>MÃªs</span>
+								<select id="pesquisaEvolucaoMes" aria-label="Selecionar mÃªs da evoluÃ§Ã£o diÃ¡ria">
+									<option value="">Todos</option>
+								</select>
+							</label>
+						</div>
+						<p id="pesquisaEvolucaoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaEvolucaoChart"
+							aria-label="EvoluÃ§Ã£o por data" role="img"></canvas></div>
+				</section>
+			</div>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Desempenho por Agente (Nota MÃ©dia)</h2>
+						<p id="pesquisaAgenteMediaStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaAgenteMediaChart"
+							aria-label="Desempenho por agente" role="img"></canvas></div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Volume por Agente</h2>
+						<p id="pesquisaAgenteVolumeStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaAgenteVolumeChart"
+							aria-label="Volume por agente" role="img"></canvas></div>
+				</section>
+			</div>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>SatisfaÃ§Ã£o por Setor</h2>
+						<p id="pesquisaSetorStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaSetorChart"
+							aria-label="SatisfaÃ§Ã£o por setor" role="img"></canvas></div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>ClassificaÃ§Ã£o x Nota MÃ©dia</h2>
+						<p id="pesquisaClassificacaoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaClassificacaoChart"
+							aria-label="ClassificaÃ§Ã£o por nota mÃ©dia" role="img"></canvas></div>
+				</section>
+			</div>
+
+			<div class="analytics-grid">
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>Canal de Entrada</h2>
+						<p id="pesquisaCanalStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaCanalChart"
+							aria-label="Canal de entrada" role="img"></canvas></div>
+				</section>
+				<section class="card analytics-card">
+					<div class="card__title-wrap">
+						<h2>HorÃ¡rios de Pico (Entrada)</h2>
+						<p id="pesquisaPicoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaPicoChart"
+							aria-label="HorÃ¡rios de pico" role="img"></canvas></div>
+				</section>
+			</div>
+
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Auditoria de Notas Baixas (1, 2 e 3)</h2>
+					<div class="card__actions card__actions--compact">
+						<label class="periodo-filter">
+							<span>Nota</span>
+							<select id="pesquisaAuditoriaNotaFiltro" aria-label="Filtrar auditoria por nota">
+								<option value="todos">Todas</option>
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+							</select>
+						</label>
+						<p id="pesquisaAuditoriaStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+					</div>
+				</div>
+				<div class="table-wrap table-wrap--preview">
+					<table class="preview-table" aria-label="Auditoria de notas baixas">
+						<thead>
+							<tr>
+								<th>Nota</th>
+								<th>Resposta</th>
+								<th>Protocolo/Cod.</th>
+								<th>Nome</th>
+								<th>Telefone</th>
+								<th>Agente</th>
+								<th>ServiÃ§o</th>
+								<th>Data</th>
+							</tr>
+						</thead>
+						<tbody id="pesquisaAuditoriaBody">
+							<tr>
+								<td colspan="8">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="pesquisa-auditoria-paginacao">
+					<button id="pesquisaAuditoriaPrevBtn" class="secondary-button" type="button"
+						disabled>Anterior</button>
+					<span id="pesquisaAuditoriaPageInfo" class="status">PÃ¡gina 0 de 0</span>
+					<button id="pesquisaAuditoriaNextBtn" class="secondary-button" type="button"
+						disabled>PrÃ³xima</button>
+				</div>
+			</section>
+		</section>
+
+		<section id="panelProspecto" class="dashboard-panel" aria-labelledby="tabProspecto" hidden>
+			<div class="card import-card">
+				<div class="import-grid">
+					<div class="file-input-group">
+						<label for="prospectoInput" class="file-label">
+							<span class="icon">&#128193;</span> Selecionar Relatório de Prospectos (CSV/XLSX)
+						</label>
+						<input type="file" id="prospectoInput"
+							accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+							hidden />
+						<p id="prospectoFileStatus" class="file-status">Nenhum arquivo selecionado</p>
+					</div>
+					<div class="import-actions">
+						<button id="prospectoImportBtn" class="btn btn--primary" type="button">Importar Dados</button>
+						<button id="prospectoLimparBtn" class="btn btn--secondary" type="button">Limpar</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="card import-card">
+				<div class="card__title-wrap">
+					<h2>Filtros de Localizacao do Prospecto</h2>
+					<div class="import-actions">
+						<button id="prospectoLimparFiltros" class="btn btn--secondary" type="button">Limpar
+							Filtros</button>
+					</div>
+				</div>
+				<div class="mapping-grid">
+					<!-- Seletor de modalidade SLA dentro do painel de filtros (remoto / externo / todos) -->
+					<div class="mapping-field mapping-field--filter" style="grid-column: 1 / -1;">
+						<span>Modalidade (SLA)</span>
+						<div id="slaFilterPanel" class="sla-filter-group" role="toolbar"
+							aria-label="Filtrar SLA por modalidade (painel)">
+							<button type="button" class="sla-filter-btn is-active" data-modalidade-sla="todos"
+								aria-pressed="true">Todos</button>
+							<button type="button" class="sla-filter-btn" data-modalidade-sla="externo"
+								aria-pressed="false">Externo</button>
+							<button type="button" class="sla-filter-btn" data-modalidade-sla="remoto"
+								aria-pressed="false">Remoto</button>
+						</div>
+					</div>
+					<label class="mapping-field">
+						<span>Rua</span>
+						<select id="prospectoFiltroRua"></select>
+					</label>
+					<label class="mapping-field">
+						<span>Cidade</span>
+						<select id="prospectoFiltroCidade"></select>
+					</label>
+					<label class="mapping-field">
+						<span>Endereco</span>
+						<select id="prospectoFiltroEndereco"></select>
+					</label>
+					<label class="mapping-field">
+						<span>Bairro</span>
+						<select id="prospectoFiltroBairro"></select>
+					</label>
+					<label class="mapping-field">
+						<span>Status</span>
+						<select id="prospectoFiltroStatus"></select>
+					</label>
+				</div>
+			</div>
+
+			<div class="analytics-grid">
+				<div class="status-card">
+					<span class="status-card__label">Total de Prospectos</span>
+					<span id="kpiTotalProspectos" class="status-card__value">0</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Convertidos</span>
+					<span id="kpiConversoes" class="status-card__value status-card__value--success">0</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Taxa de ConversÃ£o</span>
+					<span id="kpiTaxaConversao" class="status-card__value">0%</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Aguardando</span>
+					<span id="kpiAguardando" class="status-card__value status-card__value--warning">0</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Perdidos</span>
+					<span id="kpiPerdidos" class="status-card__value status-card__value--danger">0</span>
+				</div>
+			</div>
+
+			<div class="analytics-grid analytics-grid--charts">
+				<div class="card chart-card">
+					<h2>Status dos Prospectos</h2>
+					<canvas id="chartStatusProspecto"></canvas>
+				</div>
+				<div class="card chart-card">
+					<h2>Origem do Contato</h2>
+					<canvas id="chartOrigemContato"></canvas>
+				</div>
+				<div class="card chart-card analytics-card--wide">
+					<h2>ConversÃµes por Vendedor</h2>
+					<canvas id="chartVendasVendedor"></canvas>
+				</div>
+			</div>
+
+			<div class="analytics-grid analytics-grid--charts">
+				<div class="card chart-card analytics-card--wide">
+					<h2>Total x Plano (Servico)</h2>
+					<canvas id="chartTotalPlano"></canvas>
+				</div>
+				<div class="card chart-card analytics-card--wide">
+					<h2>Total de Plano por Cidade</h2>
+					<canvas id="chartPlanosVendedor"></canvas>
+				</div>
+			</div>
+
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Detalhamento Filtrado</h2>
+					<p id="prospectoDetalheStatus" class="status">Aguardando importacao.</p>
+				</div>
+				<div class="table-wrap table-wrap--preview">
+					<table class="preview-table" aria-label="Tabela detalhada de prospectos filtrados">
+						<thead>
+							<tr>
+								<th>Cliente</th>
+								<th>Cidade</th>
+								<th>Endereco</th>
+								<th>Bairro</th>
+								<th>Vendedor</th>
+								<th>Servico</th>
+								<th>Status</th>
+								<th>Quantidade</th>
+							</tr>
+						</thead>
+						<tbody id="prospectoDetalheBody">
+							<tr>
+								<td colspan="8">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="import-entry__actions" style="margin-top: 12px; justify-content: space-between;">
+					<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+						<p id="prospectoDetalhePaginacao" class="status" style="margin: 0;">Pagina 0 de 0</p>
+						<label class="mapping-field" style="margin: 0; min-width: 170px;">
+							<span>Linhas por pagina</span>
+							<select id="prospectoDetalheTamanhoPagina">
+								<option value="10">10</option>
+								<option value="25" selected>25</option>
+								<option value="50">50</option>
+								<option value="100">100</option>
+							</select>
+						</label>
+					</div>
+					<div style="display: flex; gap: 8px;">
+						<button id="prospectoDetalheAnterior" class="secondary-button" type="button">Anterior</button>
+						<button id="prospectoDetalheProxima" class="secondary-button" type="button">Proxima</button>
+					</div>
+				</div>
+			</section>
+		</section>
+
+		<!-- ===================== PAINEL ORDENS DE SERVIÃ‡O ===================== -->
+		<section id="panelOs" class="dashboard-panel" aria-labelledby="tabOs" hidden>
+
+			<!-- ImportaÃ§Ã£o -->
+			<div class="card import-card">
+				<div class="card__title-wrap">
+					<h2>&#128295; Ordens de Serviço</h2>
+					<p id="osImportStatus" class="status">Nenhum arquivo carregado.</p>
+				</div>
+				<div class="import-grid">
+					<div class="file-input-group">
+						<label for="osFileInput" class="file-label">
+							<span class="icon">&#128193;</span> Selecionar Relatório de OS (XLSX/CSV)
+						</label>
+						<input type="file" id="osFileInput"
+							accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+							hidden />
+						<p id="osFileStatusText" class="file-status">Nenhum arquivo selecionado</p>
+					</div>
+					<div class="import-actions">
+						<button id="osImportBtn" class="btn btn--primary add-button" type="button">Importar OS</button>
+						<button id="osLimparBtn" class="btn btn--secondary secondary-button"
+							type="button">Limpar</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Filtros -->
+			<div class="card import-card">
+				<div class="card__title-wrap">
+					<h2>Filtros de AnÃ¡lise</h2>
+					<button id="osLimparFiltros" class="secondary-button" type="button">Limpar Filtros</button>
+				</div>
+				<div class="mapping-grid">
+					<label class="mapping-field mapping-field--filter">
+						<span>Técnico</span>
+						<input id="osFiltroTecnicoSearch" class="filter-search" type="text"
+							placeholder="Buscar técnico..." />
+						<div id="osFiltroTecnicoOptions" class="filter-options"></div>
+						<select id="osFiltroTecnico" class="filter-select filter-select--hidden" multiple
+							size="6"></select>
+					</label>
+					<label class="mapping-field mapping-field--filter">
+						<span>Tipo de OS</span>
+						<input id="osFiltroTipoSearch" class="filter-search" type="text" placeholder="Buscar tipo..." />
+						<div id="osFiltroTipoOptions" class="filter-options"></div>
+						<select id="osFiltroTipo" class="filter-select filter-select--hidden" multiple
+							size="6"></select>
+					</label>
+					<label class="mapping-field mapping-field--filter">
+						<span>Status</span>
+						<input id="osFiltroStatusSearch" class="filter-search" type="text"
+							placeholder="Buscar status..." />
+						<div id="osFiltroStatusOptions" class="filter-options"></div>
+						<select id="osFiltroStatus" class="filter-select filter-select--hidden" multiple
+							size="6"></select>
+					</label>
+					<label class="mapping-field mapping-field--filter">
+						<span>Cidade</span>
+						<input id="osFiltroCidadeSearch" class="filter-search" type="text"
+							placeholder="Buscar cidade..." />
+						<div id="osFiltroCidadeOptions" class="filter-options"></div>
+						<select id="osFiltroCidade" class="filter-select filter-select--hidden" multiple
+							size="6"></select>
+					</label>
+					<label class="mapping-field mapping-field--filter">
+						<span>Bairro</span>
+						<input id="osFiltroBairroSearch" class="filter-search" type="text"
+							placeholder="Buscar bairro..." />
+						<div id="osFiltroBairroOptions" class="filter-options"></div>
+						<select id="osFiltroBairro" class="filter-select filter-select--hidden" multiple
+							size="6"></select>
+					</label>
+					<label class="mapping-field mapping-field--filter">
+						<span>Periodo Mês/Ano</span>
+						<input id="osFiltroPeriodoSearch" class="filter-search" type="text"
+							placeholder="Buscar periodo..." />
+						<div id="osFiltroPeriodoOptions" class="filter-options"></div>
+						<select id="osFiltroPeriodo" class="filter-select filter-select--hidden" multiple
+							size="6"></select>
+					</label>
+					<button id="osAplicarFiltros" class="add-button" type="button">Filtrar</button>
+				</div>
+			</div>
+
+			<!-- KPIs -->
+			<div class="analytics-grid" id="osKpiGrid">
+				<div class="status-card">
+					<span class="status-card__label">Total de OS</span>
+					<span id="osKpiTotal" class="status-card__value">0</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Finalizadas</span>
+					<span id="osKpiFinalizadas" class="status-card__value status-card__value--success">0</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Pendentes</span>
+					<span id="osKpiPendentes" class="status-card__value status-card__value--warning">0</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Taxa de Conclusão</span>
+					<span id="osKpiTaxaConclusao" class="status-card__value">0%</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">Tempo Médio (min)</span>
+					<span id="osKpiTempoMedio" class="status-card__value">—</span>
+				</div>
+				<div class="status-card">
+					<span class="status-card__label">SLA no Prazo</span>
+					<span id="osKpiSlaOk" class="status-card__value status-card__value--success">—</span>
+				</div>
+			</div>
+
+			<!-- GrÃ¡ficos gerais -->
+			<div class="analytics-grid analytics-grid--charts">
+				<div class="card chart-card">
+					<h2>Status das OS</h2>
+					<canvas id="osStatusChart"></canvas>
+				</div>
+				<div class="card chart-card">
+					<h2>Tipos de OS</h2>
+					<canvas id="osTipoChart"></canvas>
+				</div>
+				<div class="card chart-card analytics-card--wide">
+					<h2>OS por Cidade</h2>
+					<canvas id="osCidadeChart"></canvas>
+				</div>
+
+				<div class="card chart-card analytics-card--wide">
+					<h3>Tempo Médio de Resolução por Tipo de OS (Horas)</h3>
+					<div class="chart-wrap chart-wrap--tempo-medio">
+						<div class="chart-scroll">
+							<canvas id="osTempoMedioChart"></canvas>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Dashboard de Produtividade por Técnico -->
+			<div class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>&#128202; Produtividade por Técnico</h2>
+					<p id="osProdutividadeStatus" class="status">Aguardando dados.</p>
+				</div>
+
+				<!-- Pódio de técnicos -->
+				<div id="osPodiumContainer" class="podium" style="margin-bottom: 20px;"></div>
+
+				<div class="analytics-grid analytics-grid--charts" style="margin-top: 0;">
+					<div class="card chart-card analytics-card--wide">
+						<h2>OS por Técnico</h2>
+						<canvas id="osProdutividadeChart"></canvas>
+					</div>
+					<div class="card chart-card analytics-card--wide">
+						<h2>Tempo Médio por Técnico (min)</h2>
+						<canvas id="osTempoMedioTecnicoChart"></canvas>
+					</div>
+				</div>
+
+				<div class="analytics-grid analytics-grid--charts" style="margin-top: 16px;">
+					<div class="card chart-card analytics-card--wide">
+						<h2>Taxa de Conclusão por Técnico</h2>
+						<canvas id="osTaxaConclusaoTecnicoChart"></canvas>
+					</div>
+					<div class="card chart-card analytics-card--wide">
+						<h2>OS por Tipo e Técnico</h2>
+						<canvas id="osTipoTecnicoChart"></canvas>
+					</div>
+				</div>
+
+				<!-- Tabela de produtividade -->
+				<div class="table-wrap table-wrap--preview" style="margin-top: 20px;">
+					<table class="preview-table" aria-label="Tabela de produtividade por técnico">
+						<thead>
+							<tr>
+								<th>Técnico</th>
+								<th>Total OS</th>
+								<th>Finalizadas</th>
+								<th>Pendentes</th>
+								<th>Taxa Conclusão</th>
+								<th>Tempo Médio (min)</th>
+								<th>Tempo Mín (min)</th>
+								<th>Tempo Máx (min)</th>
+							</tr>
+						</thead>
+						<tbody id="osProdutividadeTableBody">
+							<tr>
+								<td colspan="8">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- Dashboard de SLA -->
+			<div class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<h2>Dashboard de SLA</h2>
+					<p id="osSlaStatus" class="status">Aguardando dados.</p>
+				</div>
+
+				<div class="sla-summary" id="osSlaResumo"></div>
+
+				<div class="analytics-grid analytics-grid--charts">
+					<div class="card chart-card">
+						<h2>Distribuição de SLA</h2>
+						<canvas id="osSlaDistChart"></canvas>
+					</div>
+					<div class="card chart-card">
+						<h2>SLA Médio por Tipo de OS (h)</h2>
+						<canvas id="osSlaTipoChart"></canvas>
+					</div>
+					<div class="card chart-card analytics-card--wide">
+						<h2>SLA por Técnico (tempo médio em min)</h2>
+						<canvas id="osSlaAtendentesChart"></canvas>
+					</div>
+				</div>
+
+				<div class="analytics-grid analytics-grid--charts" style="margin-top: 16px;">
+					<div class="card chart-card analytics-card--wide">
+						<h2>Distribuição de Duração por Faixa (min)</h2>
+						<canvas id="osSlaDuracaoFaixaChart"></canvas>
+					</div>
+					<div class="card chart-card analytics-card--wide">
+						<h2>OS por Dia da Semana</h2>
+						<canvas id="osDiaSemanaChart"></canvas>
+					</div>
+				</div>
+
+				<!-- Tabela SLA detalhada -->
+				<div class="card__title-wrap" style="margin-top: 20px;">
+					<h2>Detalhes de SLA por OS</h2>
+					<div style="display:flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+						<input id="osSlaSearch" type="text" class="filter-search"
+							placeholder="Buscar cliente ou técnico..." style="min-width: 220px;" />
+						<select id="osSlaFiltroStatus" class="filter-select"
+							style="display: block; width: auto; padding: 6px 10px; border-radius: 6px;">
+							<option value="">Todos status</option>
+							<option value="finalizado">Finalizado</option>
+							<option value="pendente">Pendente</option>
+							<option value="aguardando_agendamento">Aguardando</option>
+						</select>
+					</div>
+				</div>
+				<div class="table-wrap table-wrap--preview">
+					<table class="preview-table" aria-label="Tabela de SLA das OS">
+						<thead>
+							<tr>
+								<th>NÂº OS</th>
+								<th>Cliente</th>
+								<th>TÃ©cnico</th>
+								<th>Tipo</th>
+								<th>Status</th>
+								<th>Data Programada</th>
+								<th>InÃ­cio Exec.</th>
+								<th>TÃ©rmino Exec.</th>
+								<th>DuraÃ§Ã£o (min)</th>
+								<th>Cidade</th>
+							</tr>
+						</thead>
+						<tbody id="osSlaTableBody">
+							<tr>
+								<td colspan="10">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="import-entry__actions" style="margin-top: 12px; justify-content: space-between;">
+					<div style="display: flex; align-items: center; gap: 10px;">
+						<p id="osSlaPageInfo" class="status" style="margin:0;">PÃ¡gina 0 de 0</p>
+						<label class="mapping-field" style="margin:0; min-width:170px;">
+							<span>Linhas por pÃ¡gina</span>
+							<select id="osSlaTamanhoPagina">
+								<option value="10">10</option>
+								<option value="25" selected>25</option>
+								<option value="50">50</option>
+								<option value="100">100</option>
+							</select>
+						</label>
+					</div>
+					<div style="display: flex; gap: 8px;">
+						<button id="osSlaAnterior" class="secondary-button" type="button">Anterior</button>
+						<button id="osSlaProxima" class="secondary-button" type="button">PrÃ³xima</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Diagnostico de Rede: Lentidao / Desconexoes / Sem Conexao por OLT e PON -->
+			<div class="card import-card">
+				<div class="card__title-wrap">
+					<h2>Diagnóstico de Rede (OLT / PON)</h2>
+					<p id="osRedeStatus" class="status">Aguardando importação do relatório de OS.</p>
+				</div>
+				<div id="osRedeResumo" class="bairro-summary"></div>
+
+				<h3 style="margin: 14px 0 6px;">Resumo por OLT</h3>
+				<div class="table-wrap table-wrap--preview">
+					<table class="preview-table" aria-label="Resumo de ocorrencias de rede por OLT">
+						<thead>
+							<tr>
+								<th>OLT</th>
+								<th>Lentidão Fibra</th>
+								<th>Desconexões</th>
+								<th>Sem Conexão</th>
+								<th>Total</th>
+								<th>PONs distintas afetadas</th>
+							</tr>
+						</thead>
+						<tbody id="osRedeOltTableBody">
+							<tr>
+								<td colspan="6">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<h3 style="margin: 18px 0 6px;">Detalhe por PON (quadro/placa/porta)</h3>
+				<div class="import-entry__actions" style="margin: 10px 0;">
+					<input id="osRedeSearch" type="text" class="filter-search"
+						placeholder="Buscar OLT ou PON..." style="min-width: 220px;" />
+				</div>
+				<div class="table-wrap table-wrap--preview">
+					<table class="preview-table" aria-label="Tabela de ocorrencias de rede por OLT e PON">
+						<thead>
+							<tr>
+								<th>OLT</th>
+								<th>PON</th>
+								<th>Lentidão Fibra</th>
+								<th>Desconexões</th>
+								<th>Sem Conexão</th>
+								<th>Total</th>
+							</tr>
+						</thead>
+						<tbody id="osRedeTableBody">
+							<tr>
+								<td colspan="6">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+		</section>
+		<!-- ===================== FIM PAINEL OS ===================== -->
+
+	</main>
+
+	<!-- Bibliotecas base -->
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+	<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+	<!-- Regras de cada painel -->
+	<script src="app.js"></script>
+	<script src="app_chat.js"></script>
+	<script src="app_nps.js"></script>
+	<script src="app_pesquisa.js"></script>
+	<script src="app_prospectos.js"></script>
+	<script src="app_os.js"></script>
+
+	<!-- Orquestracao das abas (executar por ultimo) -->
+	<script src="app_tabs.js"></script>
+</body>
+
+</html>

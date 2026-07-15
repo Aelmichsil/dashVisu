@@ -1,0 +1,14 @@
+# Ignorar arquivos compilados do Java
+*.class
+*.bluej
+*.pkg
+
+# Ignorar pastas de build e temporárias
+bin/
+tmp/
+.metadata/
+.settings/
+
+# Ignorar arquivos do sistema operacional
+Thumbs.db
+.DS_Store
