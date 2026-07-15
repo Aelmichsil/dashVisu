@@ -11,4 +11,4 @@ tmp/
 
 # Ignorar arquivos do sistema operacional
 Thumbs.db
-.DS_Store
+.DS_Storesupabase_atendimentos.sql
