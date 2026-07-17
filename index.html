@@ -6,9 +6,9 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<meta name="description"
-		content="Dashboard de atendimentos internos â€” acompanhe o volume mensal de atendimentos registrados no Hubsoft." />
+		content="Dashboard de atendimentos internos - acompanhe o volume mensal de atendimentos registrados no Hubsoft." />
 	<!-- Credenciais do Supabase: preencha os atributos content abaixo. -->
-	<!-- Nunca versione este arquivo com as chaves reais preenchidas em repositÃ³rios pÃºblicos. -->
+	<!-- Nunca versione este arquivo com as chaves reais preenchidas em repositórios públicos. -->
 	<meta name="supabase-url" content="https://bnhftpeqmocrtrounehp.supabase.co" />
 	<meta name="supabase-key" content="sb_publishable_ASQoX-jX2xY_aUGfVjkcjw_X85p16T4" />
 
@@ -17,14 +17,19 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
 		rel="stylesheet" />
-	<link rel="stylesheet" href="styles.css" />
+	<link rel="stylesheet" href="assets/css/styles.css" />
+	<link rel="icon" href="favicon.png" type="image/x-icon" />
 	<!-- Bibliotecas de Exportacao -->
 	<script defer src=".../html2canvas.min.js"></script>
 	<script defer src=".../jspdf.umd.min.js"></script>
 	<script defer src=".../pptxgen.umd.min.js"></script>
+
+	<!-- Autenticacao: carregado cedo e de forma sincrona para bloquear acesso nao autenticado -->
+	<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+	<script src="assets/js/auth/auth-guard.js"></script>
 </head>
 
-<body>
+<body style="visibility:hidden">
 	<!-- Formas decorativas de fundo (sem impacto funcional nos dados). -->
 	<div class="bg-shape bg-shape-1"></div>
 	<div class="bg-shape bg-shape-2"></div>
@@ -34,7 +39,7 @@
 		<header class="dashboard__header">
 			<p class="eyebrow">Supervisao - Painel Unificado</p>
 			<h1>Dashboard de Atendimentos</h1>
-			<div id="sectionSwitcher" class="nav-tabs" aria-label="Alternar seÃ§Ã£o do dashboard">
+			<div id="sectionSwitcher" class="nav-tabs" aria-label="Alternar seção do dashboard">
 				<button id="tabHubsoft" class="nav-tab nav-tab--active" type="button" role="tab"
 					aria-controls="panelHubsoft" aria-selected="true">&#128203; Hubsoft</button>
 				<button id="tabAtendimentos" class="nav-tab" type="button" role="tab" aria-controls="panelAtendimentos"
@@ -57,13 +62,13 @@
 		<section id="panelHubsoft" class="dashboard-panel" aria-labelledby="tabHubsoft">
 			<div class="dashboard__export-buttons"
 				style="display: flex; gap: 10px; margin: 15px 0; justify-content: center;">
-				<button id="exportPdfBtn" class="add-button" type="button" title="Exportar dashboard para PDF">â¬‡
+				<button id="exportPdfBtn" class="add-button" type="button" title="Exportar dashboard para PDF">⬇
 					PDF</button>
 				<button id="exportPptxBtn" class="add-button" type="button"
-					title="Exportar dashboard para PowerPoint">â¬‡
+					title="Exportar dashboard para PowerPoint">⬇
 					PPTX</button>
 			</div>
-			<div class="semantic-legend" aria-label="Legenda de cores dos graficos">
+			<div class="semantic-legend" aria-label="Legenda de cores dos gráficos">
 				<span class="semantic-legend__item"><span
 						class="semantic-legend__dot semantic-legend__dot--ok"></span>Bom</span>
 				<span class="semantic-legend__item"><span
@@ -80,9 +85,9 @@
 
 
 			<section class="card">
-				<!-- Bloco de entrada de dados: importacao + mapeamento + filtros. -->
+				<!-- Bloco de entrada de dados: importação + mapeamento + filtros. -->
 				<div class="card__title-wrap">
-					<h2>Curva de Atendimentos por Mes</h2>
+					<h2>Curva de Atendimentos por Mês</h2>
 					<div class="card__actions">
 						<p id="status" class="status" role="status" aria-live="polite">Carregando dados...</p>
 						<button id="openManualForm" class="icon-button" type="button"
@@ -92,8 +97,8 @@
 				<div class="import-entry">
 					<div class="import-entry__header">
 						<div>
-							<h3>Importacao em lote</h3>
-							<p>Escolha um arquivo XML ou PDF. O sistema tenta identificar as colunas de mes e
+							<h3>Importação em lote</h3>
+							<p>Escolha um arquivo XML ou PDF. O sistema tenta identificar as colunas de mês e
 								quantidade
 								automaticamente.</p>
 						</div>
@@ -112,19 +117,19 @@
 					</div>
 					<div class="import-entry__actions">
 						<button id="importButton" class="add-button" type="button">Importar arquivo</button>
-						<button id="clearImportButton" class="secondary-button" type="button">Limpar
-							importacao</button>
+								<button id="clearImportButton" class="secondary-button" type="button">Limpar
+									importação</button>
 					</div>
 					<p id="fileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
 						selecionado.</p>
-					<p id="fileOsStatus" class="file-status" role="status" aria-live="polite">Arquivo OS nao
+						<p id="fileOsStatus" class="file-status" role="status" aria-live="polite">Arquivo OS não
 						carregado.</p>
 					<div id="previewPanel" class="preview-panel is-collapsed">
 						<div class="preview-panel__header">
-							<h3>Previa da importacao</h3>
+							<h3>Prévia da importação</h3>
 							<button id="togglePreviewPanelButton" class="preview-panel__toggle" type="button"
 								aria-expanded="false" aria-controls="previewPanelContent">&#9662;</button>
-							<p id="previewSummary" class="preview-panel__summary">Selecione um arquivo para ver
+								<p id="previewSummary" class="preview-panel__summary">Selecione um arquivo para ver
 								as colunas
 								detectadas.</p>
 						</div>
@@ -144,11 +149,11 @@
 									<select id="openingUserColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
-									<span>Coluna do usuario (ResponsÃ¡vel)</span>
+									<span>Coluna do usuário (Responsável)</span>
 									<select id="userColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
-									<span>Coluna da resolucao</span>
+									<span>Coluna da resolução</span>
 									<select id="resolutionColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
@@ -164,11 +169,11 @@
 									<select id="dataFechamentoColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
-									<span>Coluna descriÃ§Ã£o abertura</span>
+									<span>Coluna descrição abertura</span>
 									<select id="descricaoAberturaColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
-									<span>Coluna descriÃ§Ã£o fechamento</span>
+									<span>Coluna descrição fechamento</span>
 									<select id="descricaoFechamentoColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
@@ -188,7 +193,7 @@
 									<select id="bairroColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
-									<span>Coluna usuario fechamento</span>
+									<span>Coluna usuário fechamento</span>
 									<select id="usuarioFechamentoColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
@@ -196,7 +201,7 @@
 									<select id="nomeClienteColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
-									<span>Coluna codigo cliente</span>
+									<span>Coluna código cliente</span>
 									<select id="codigoClienteColumnSelect"></select>
 								</label>
 								<label class="mapping-field">
@@ -213,13 +218,13 @@
 									mapeamento</button>
 							</div>
 							<div class="table-wrap table-wrap--preview">
-								<table class="preview-table" aria-label="Previa dos dados importados">
+								<table class="preview-table" aria-label="Prévia dos dados importados">
 									<thead>
 										<tr>
-											<th>Mes</th>
+											<th>Mês</th>
 											<th>Quantidade</th>
-											<th>Usuario</th>
-											<th>Resolucao</th>
+											<th>Usuário</th>
+											<th>Resolução</th>
 										</tr>
 									</thead>
 									<tbody id="previewTableBody">
@@ -234,88 +239,69 @@
 					<div class="filter-toggle-wrap">
 						<button id="toggleFilterSectionButton" class="secondary-button" type="button"
 							aria-expanded="false" aria-controls="filterSection" disabled>Filtros de
-							AnÃ¡lise</button>
+							Análise</button>
 					</div>
 					<div id="filterSection" class="import-entry filter-section--hidden">
 						<div class="import-entry__header">
-							<h3>Filtros de AnÃ¡lise</h3>
-							<p>Filtre os dados importados por usuÃ¡rio de abertura ou responsÃ¡vel para anÃ¡lises
-								direcionadas.
-							</p>
-
-							<div class="mapping-grid">
-								<label class="mapping-field mapping-field--filter" data-multiselect="true">
-									<span>UsuÃ¡rio de Abertura</span>
-									<input id="filterOpeningUserSearch" class="filter-search" type="text"
-										placeholder="Buscar usuÃ¡rio..." />
-									<div id="filterOpeningUserOptions" class="filter-options"></div>
-									<select id="filterOpeningUser" class="filter-select filter-select--hidden" multiple
-										size="6"
-										aria-label="Filtro de usuÃ¡rios de abertura, selecione um ou mais"></select>
-								</label>
-								<label class="mapping-field mapping-field--filter" data-multiselect="true">
-									<span>UsuÃ¡rio ResponsÃ¡vel</span>
-									<input id="filterResponsibleUserSearch" class="filter-search" type="text"
-										placeholder="Buscar usuÃ¡rio..." />
-									<div id="filterResponsibleUserOptions" class="filter-options"></div>
-									<select id="filterResponsibleUser" class="filter-select filter-select--hidden"
-										multiple size="6"
-										aria-label="Filtro de usuÃ¡rios responsÃ¡veis, selecione um ou mais"></select>
-								</label>
-								<label class="mapping-field mapping-field--filter" data-multiselect="true">
-									<span>Tipo de Atendimento</span>
-									<input id="filterServiceTypeSearch" class="filter-search" type="text"
-										placeholder="Buscar tipo..." />
-									<div id="filterServiceTypeOptions" class="filter-options"></div>
-									<select id="filterServiceType" class="filter-select filter-select--hidden" multiple
-										size="6"
-										aria-label="Filtro de tipo de atendimento, selecione um ou mais"></select>
-								</label>
-								<label class="mapping-field mapping-field--filter" data-multiselect="true">
-									<span>Cidade</span>
-									<input id="filterCitySearch" class="filter-search" type="text"
-										placeholder="Buscar cidade..." />
-									<div id="filterCityOptions" class="filter-options"></div>
-									<select id="filterCity" class="filter-select filter-select--hidden" multiple
-										size="6" aria-label="Filtro de cidade, selecione uma ou mais"></select>
-								</label>
-								<label class="mapping-field mapping-field--filter" data-multiselect="true">
-									<span>Bairro</span>
-									<input id="filterBairroSearch" class="filter-search" type="text"
-										placeholder="Buscar bairro..." />
-									<div id="filterBairroOptions" class="filter-options"></div>
-									<select id="filterBairro" class="filter-select filter-select--hidden" multiple
-										size="6" aria-label="Filtro de bairro, selecione um ou mais"></select>
-								</label>
-								<label class="mapping-field mapping-field--filter" data-multiselect="true">
-									<span>MÃªs</span>
-									<input id="filterMonthSearch" class="filter-search" type="text"
-										placeholder="Buscar mÃªs..." />
-									<div id="filterMonthOptions" class="filter-options"></div>
-									<select id="filterMonth" class="filter-select filter-select--hidden" multiple
-										size="6" aria-label="Filtro de mÃªs, selecione um ou mais"></select>
-								</label>
-
-								<!-- Filtrar por equipe -->
-								<div class="mapping-field" style="grid-column: 1 / -1;">
-									<span>Filtro Rápido por Equipe</span>
-									<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem;">
-										<button id="filtroEquipeSuporte" class="secondary-button" type="button">
-											👥 Suporte
-										</button>
-										<button id="filtroEquipeLimpar" class="secondary-button" type="button">
-											✕ Limpar Equipe
-										</button>
-									</div>
-								</div>
-
-								<button id="applyFiltersBtn" class="add-button" type="button">Filtrar
-									Dados</button>
-								<button id="clearFiltersBtn" class="secondary-button" type="button">Limpar
-									Filtros</button>
-							</div>
+							<h3>Filtros de Análise</h3>
+							<p>Filtre os dados importados por usuário de abertura ou responsável para análises direcionadas.</p>
 						</div>
-						<div class="preview-panel pivot-panel">
+
+						<div class="mapping-grid">
+							<label class="mapping-field mapping-field--filter" data-multiselect="true">
+								<span>Usuário de Abertura</span>
+								<input id="filterOpeningUserSearch" class="filter-search" type="text" placeholder="Buscar usuário..." />
+								<div id="filterOpeningUserOptions" class="filter-options"></div>
+								<select id="filterOpeningUser" class="filter-select filter-select--hidden" multiple size="6" aria-label="Filtro de usuários de abertura, selecione um ou mais"></select>
+							</label>
+							<label class="mapping-field mapping-field--filter" data-multiselect="true">
+								<span>Usuário Responsável</span>
+								<input id="filterResponsibleUserSearch" class="filter-search" type="text" placeholder="Buscar usuário..." />
+								<div id="filterResponsibleUserOptions" class="filter-options"></div>
+								<select id="filterResponsibleUser" class="filter-select filter-select--hidden" multiple size="6" aria-label="Filtro de usuários responsáveis, selecione um ou mais"></select>
+							</label>
+							<label class="mapping-field mapping-field--filter" data-multiselect="true">
+								<span>Tipo de Atendimento</span>
+								<input id="filterServiceTypeSearch" class="filter-search" type="text" placeholder="Buscar tipo..." />
+								<div id="filterServiceTypeOptions" class="filter-options"></div>
+								<select id="filterServiceType" class="filter-select filter-select--hidden" multiple size="6" aria-label="Filtro de tipo de atendimento, selecione um ou mais"></select>
+							</label>
+							<label class="mapping-field mapping-field--filter" data-multiselect="true">
+								<span>Cidade</span>
+								<input id="filterCitySearch" class="filter-search" type="text" placeholder="Buscar cidade..." />
+								<div id="filterCityOptions" class="filter-options"></div>
+								<select id="filterCity" class="filter-select filter-select--hidden" multiple size="6" aria-label="Filtro de cidade, selecione uma ou mais"></select>
+							</label>
+							<label class="mapping-field mapping-field--filter" data-multiselect="true">
+								<span>Bairro</span>
+								<input id="filterBairroSearch" class="filter-search" type="text" placeholder="Buscar bairro..." />
+								<div id="filterBairroOptions" class="filter-options"></div>
+								<select id="filterBairro" class="filter-select filter-select--hidden" multiple size="6" aria-label="Filtro de bairro, selecione um ou mais"></select>
+							</label>
+							<label class="mapping-field mapping-field--filter" data-multiselect="true">
+								<span>Mês</span>
+								<input id="filterMonthSearch" class="filter-search" type="text" placeholder="Buscar mês..." />
+								<div id="filterMonthOptions" class="filter-options"></div>
+								<select id="filterMonth" class="filter-select filter-select--hidden" multiple size="6" aria-label="Filtro de mês, selecione um ou mais"></select>
+							</label>
+
+							<div class="mapping-field" style="grid-column: 1 / -1;">
+								<span>Filtro Rápido por Equipe</span>
+								<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem;">
+									<button id="filtroEquipeSuporte" class="secondary-button" type="button">
+										👥 Suporte
+									</button>
+									<button id="filtroEquipeLimpar" class="secondary-button" type="button">
+										✕ Limpar Equipe
+									</button>
+								</div>
+							</div>
+
+							<button id="applyFiltersBtn" class="add-button" type="button">Filtrar Dados</button>
+							<button id="clearFiltersBtn" class="secondary-button" type="button">Limpar Filtros</button>
+						</div>
+					</div>
+					<div class="preview-panel pivot-panel">
 							<div class="preview-panel__header">
 								<h3>Resultado pivoteado (Mes x Motivo)</h3>
 								<p id="pivotSummary" class="preview-panel__summary">Aguardando dados para gerar
@@ -339,7 +325,7 @@
 							</div>
 						</div>
 					</div>
-					<!-- FormulÃ¡rio de importaÃ§Ã£o -->
+						<!-- Formulário de importação -->
 				</div>
 
 				<div class="analytics-grid">
@@ -464,11 +450,11 @@
 										placeholder="Ex: 5000" />
 								</label>
 								<button id="calcLentidaoKpiBtn" class="secondary-button" type="button">Calcular
-									IncidÃªncia</button>
+									Incidência</button>
 							</div>
 							<div class="support-incidencia-kpi__result">
-								<span class="support-incidencia-kpi__label">IncidÃªncia de Suporte por LentidÃ£o</span>
-								<strong id="incidenciaLentidaoValue" class="support-incidencia-kpi__value">â€”</strong>
+								<span class="support-incidencia-kpi__label">Incidência de Suporte por Lentidão</span>
+								<strong id="incidenciaLentidaoValue" class="support-incidencia-kpi__value">—</strong>
 								<span id="incidenciaLentidaoDetail" class="support-incidencia-kpi__detail">Informe a
 									base total
 									de clientes para calcular.</span>
@@ -511,8 +497,8 @@
 				<div class="analytics-grid analytics-grid--full">
 					<section class="card analytics-card analytics-card--wide">
 						<div class="card__title-wrap">
-							<h2>Quantidade por Plano de ServiÃ§o</h2>
-							<p id="planoServicoStatus" class="status">Aguardando importacao com coluna servico.</p>
+							<h2>Quantidade por Plano de Serviço</h2>
+							<p id="planoServicoStatus" class="status">Aguardando importação com coluna servico.</p>
 						</div>
 						<div id="planoServicoSummary" class="bairro-summary"></div>
 						<div class="chart-wrap chart-wrap--small">
@@ -686,9 +672,9 @@
 
 		<section id="panelChat" class="dashboard-panel" aria-labelledby="tabChat" hidden>
 			<div class="dashboard__export-buttons" style="display:flex;gap:10px;margin:10px 0;justify-content:center;">
-				<button id="chatExportPdfBtn" class="add-button" type="button" title="Exportar para PDF">â¬‡
+					<button id="chatExportPdfBtn" class="add-button" type="button" title="Exportar para PDF">⬇
 					PDF</button>
-				<button id="chatExportPptxBtn" class="add-button" type="button" title="Exportar para PowerPoint">â¬‡
+					<button id="chatExportPptxBtn" class="add-button" type="button" title="Exportar para PowerPoint">⬇
 					PPTX</button>
 			</div>
 			<div class="semantic-legend" aria-label="Legenda de cores">
@@ -737,24 +723,24 @@
 				</div>
 				<div class="kpi-grid" id="chatKpiGrid">
 					<div class="kpi-card"><span class="kpi-card__label">Total de Chats</span><span
-							class="kpi-card__value" id="kpiTotal">â€”</span></div>
+							class="kpi-card__value" id="kpiTotal">—</span></div>
 					<div class="kpi-card kpi-card--ok"><span class="kpi-card__label">Finalizados</span><span
-							class="kpi-card__value" id="kpiFinalizados">â€”</span><span class="kpi-card__sub"
-							id="kpiFinalizadosPct">â€”</span></div>
+							class="kpi-card__value" id="kpiFinalizados">—</span><span class="kpi-card__sub"
+							id="kpiFinalizadosPct">—</span></div>
 					<div class="kpi-card kpi-card--info"><span class="kpi-card__label">Em Atendimento</span><span
-							class="kpi-card__value" id="kpiEmAtendimento">â€”</span></div>
+							class="kpi-card__value" id="kpiEmAtendimento">—</span></div>
 					<div class="kpi-card kpi-card--warn"><span class="kpi-card__label">Automaticos</span><span
-							class="kpi-card__value" id="kpiAutomatico">â€”</span></div>
+							class="kpi-card__value" id="kpiAutomatico">—</span></div>
 					<div class="kpi-card"><span class="kpi-card__label">TM Fila</span><span class="kpi-card__value"
-							id="kpiTmFila">â€”</span><span class="kpi-card__sub">Tempo medio em fila</span></div>
+							id="kpiTmFila">—</span><span class="kpi-card__sub">Tempo médio em fila</span></div>
 					<div class="kpi-card"><span class="kpi-card__label">TM Atendimento</span><span
-							class="kpi-card__value" id="kpiTmAtend">â€”</span><span class="kpi-card__sub">Tempo medio de
+							class="kpi-card__value" id="kpiTmAtend">—</span><span class="kpi-card__sub">Tempo médio de
 							atend.</span></div>
 					<div class="kpi-card"><span class="kpi-card__label">TMIC</span><span class="kpi-card__value"
-							id="kpiTmic">â€”</span><span class="kpi-card__sub">1a mensagem do agente</span></div>
+							id="kpiTmic">—</span><span class="kpi-card__sub">1a mensagem do agente</span></div>
 					<div class="kpi-card kpi-card--warn"><span class="kpi-card__label">Recorrentes</span><span
-							class="kpi-card__value" id="kpiRecorrentes">â€”</span><span class="kpi-card__sub"
-							id="kpiRecorrentesPct">â€”</span></div>
+							class="kpi-card__value" id="kpiRecorrentes">—</span><span class="kpi-card__sub"
+							id="kpiRecorrentesPct">—</span></div>
 				</div>
 			</section>
 
@@ -775,10 +761,10 @@
 						<label class="mapping-field mapping-field--filter" data-multiselect="true">
 							<span>Servico</span>
 							<input id="chatFiltroServicoSearch" class="filter-search" type="text"
-								placeholder="Buscar serviÃ§o..." />
+								placeholder="Buscar serviço..." />
 							<div id="chatFiltroServicoOptions" class="filter-options"></div>
 							<select id="chatFiltroServico" class="filter-select filter-select--hidden" multiple size="6"
-								aria-label="Filtro de serviÃ§os, selecione um ou mais"></select>
+								aria-label="Filtro de serviços, selecione um ou mais"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter" data-multiselect="true">
 							<span>Status</span>
@@ -799,10 +785,10 @@
 						<label class="mapping-field mapping-field--filter" data-multiselect="true">
 							<span>Recorrencia</span>
 							<input id="chatFiltroRecorrenciaSearch" class="filter-search" type="text"
-								placeholder="Buscar recorrÃªncia..." />
+								placeholder="Buscar recorrência..." />
 							<div id="chatFiltroRecorrenciaOptions" class="filter-options"></div>
 							<select id="chatFiltroRecorrencia" class="filter-select filter-select--hidden" multiple
-								size="6" aria-label="Filtro de recorrÃªncia, selecione um ou mais"></select>
+								size="6" aria-label="Filtro de recorrência, selecione um ou mais"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter" data-multiselect="true">
 							<span>Ativo/Receptivo</span>
@@ -814,7 +800,7 @@
 						</label>
 						<label class="mapping-field">
 							<span>Periodo</span>
-							<select id="chatFiltroPeriodo" aria-label="Filtro de perÃ­odo">
+							<select id="chatFiltroPeriodo" aria-label="Filtro de período">
 								<option value="todos">Todo periodo</option>
 								<option value="7">Ultimos 7 dias</option>
 								<option value="30" selected>Ultimos 30 dias</option>
@@ -929,12 +915,12 @@
 			<section class="card analytics-card analytics-card--wide recorrencia-contatos-section">
 				<div class="card__title-wrap">
 					<h2>Contatos por Tipo de Recorrencia</h2>
-					<p class="status">Top 10 por categoria com paginaÃ§Ã£o.</p>
+					<p class="status">Top 10 por categoria com paginação.</p>
 				</div>
-				<div class="recorrencia-contatos-grid" aria-label="Contatos por categoria de recorrÃªncia">
+				<div class="recorrencia-contatos-grid" aria-label="Contatos por categoria de recorrência">
 					<article class="recorrencia-contatos-card">
 						<h3>Reincidente <span class="indicador-help"
-								title="Cliente voltou a relatar o mesmo problema jÃ¡ atendido anteriormente."
+								title="Cliente voltou a relatar o mesmo problema já atendido anteriormente."
 								tabindex="0">?</span></h3>
 						<p id="chatRecorrenciaReincidenteMeta" class="recorrencia-contatos-meta">0 contato(s)</p>
 						<ul id="chatRecorrenciaReincidenteList" class="recorrencia-contatos-list">
@@ -951,7 +937,7 @@
 					</article>
 					<article class="recorrencia-contatos-card">
 						<h3>Recorrente <span class="indicador-help"
-								title="Problema acontece com frequÃªncia, mesmo apÃ³s atendimentos."
+								title="Problema acontece com frequência, mesmo após atendimentos."
 								tabindex="0">?</span>
 						</h3>
 						<p id="chatRecorrenciaRecorrenteMeta" class="recorrencia-contatos-meta">0 contato(s)</p>
@@ -1027,19 +1013,19 @@
 							<tr>
 								<th>Agente</th>
 								<th>Qtd. Chats</th>
-								<th title="TM Fila: tempo mÃ©dio que o cliente aguarda na fila atÃ© ser atendido."
-									aria-label="TM Fila: tempo mÃ©dio que o cliente aguarda na fila atÃ© ser atendido.">
+								<th title="TM Fila: tempo médio que o cliente aguarda na fila até ser atendido."
+									aria-label="TM Fila: tempo médio que o cliente aguarda na fila até ser atendido.">
 									TM
 									Fila</th>
-								<th title="TM Atendimento: tempo mÃ©dio total do atendimento atÃ© a finalizaÃ§Ã£o."
-									aria-label="TM Atendimento: tempo mÃ©dio total do atendimento atÃ© a finalizaÃ§Ã£o.">
+								<th title="TM Atendimento: tempo médio total do atendimento até a finalização."
+									aria-label="TM Atendimento: tempo médio total do atendimento até a finalização.">
 									TM
 									Atendimento</th>
-								<th title="TMIC: tempo mÃ©dio para a primeira interaÃ§Ã£o do colaborador com o cliente."
-									aria-label="TMIC: tempo mÃ©dio para a primeira interaÃ§Ã£o do colaborador com o cliente.">
+								<th title="TMIC: tempo médio para a primeira interação do colaborador com o cliente."
+									aria-label="TMIC: tempo médio para a primeira interação do colaborador com o cliente.">
 									TMIC</th>
-								<th title="TMIA: tempo mÃ©dio entre interaÃ§Ãµes durante o atendimento."
-									aria-label="TMIA: tempo mÃ©dio entre interaÃ§Ãµes durante o atendimento.">TMIA</th>
+								<th title="TMIA: tempo médio entre interações durante o atendimento."
+									aria-label="TMIA: tempo médio entre interações durante o atendimento.">TMIA</th>
 								<th>Finaliz.</th>
 								<th>% Finaliz.</th>
 							</tr>
@@ -1082,19 +1068,19 @@
 			<section class="card nps-hero-card">
 				<div class="card__title-wrap">
 					<div>
-						<p class="eyebrow">Cancelamentos de ServiÃ§o</p>
+						<p class="eyebrow">Cancelamentos de Serviço</p>
 						<h2>Dashboard de Cancelamentos</h2>
-						<p class="subtitle">Analise motivos, serviÃ§os cancelados, cidades, bairros e longevidade dos
-							clientes que saÃ­ram.</p>
+						<p class="subtitle">Analise motivos, serviços cancelados, cidades, bairros e longevidade dos
+							clientes que saíram.</p>
 					</div>
-					<p id="npsStatus" class="status" role="status" aria-live="polite">Importe o relatÃ³rio de
-						cancelamentos (CSV ou XLSX) para iniciar a anÃ¡lise.</p>
+					<p id="npsStatus" class="status" role="status" aria-live="polite">Importe o relatório de
+						cancelamentos (CSV ou XLSX) para iniciar a análise.</p>
 				</div>
 				<div class="import-entry">
 					<div class="import-entry__header">
 						<div>
-							<h3>ImportaÃ§Ã£o do relatÃ³rio de cancelamentos</h3>
-							<p>Use o relatÃ³rio exportado do Hubsoft com as colunas: <strong>codigo_cliente,
+							<h3>Importação do relatório de cancelamentos</h3>
+							<p>Use o relatório exportado do Hubsoft com as colunas: <strong>codigo_cliente,
 									nome_razaosocial, data_cancelamento, motivo_cancelamento, servico, bairro, cidade,
 									data_cadastro</strong>.</p>
 						</div>
@@ -1105,7 +1091,7 @@
 						</label>
 					</div>
 					<div class="import-entry__actions">
-						<button id="npsImportButton" class="add-button" type="button">Importar relatÃ³rio</button>
+						<button id="npsImportButton" class="add-button" type="button">Importar relatório</button>
 						<button id="npsClearButton" class="secondary-button" type="button">Limpar dados</button>
 					</div>
 					<p id="npsFileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
@@ -1113,22 +1099,22 @@
 				</div>
 				<div class="filter-toggle-wrap">
 					<button id="npsToggleFilterSectionButton" class="secondary-button" type="button"
-						aria-expanded="false" aria-controls="npsFilterSection" disabled>Filtros de AnÃ¡lise</button>
+						aria-expanded="false" aria-controls="npsFilterSection" disabled>Filtros de Análise</button>
 				</div>
 				<div id="npsFilterSection" class="import-entry filter-section--hidden">
 					<div class="import-entry__header">
-						<h3>Filtros de AnÃ¡lise</h3>
-						<p>Filtre os cancelamentos por usuÃ¡rio de cancelamento, motivo, serviÃ§o, cidade, bairro e mÃªs
-							para anÃ¡lises direcionadas.</p>
+						<h3>Filtros de Análise</h3>
+						<p>Filtre os cancelamentos por usuário de cancelamento, motivo, serviço, cidade, bairro e mês
+							para análises direcionadas.</p>
 					</div>
 					<div class="mapping-grid">
 						<label class="mapping-field mapping-field--filter">
-							<span>UsuÃ¡rio de Cancelamento</span>
+							<span>Usuário de Cancelamento</span>
 							<input id="npsFilterUsuarioCancelamentoSearch" class="filter-search" type="text"
-								placeholder="Buscar usuÃ¡rio..." />
+								placeholder="Buscar usuário..." />
 							<div id="npsFilterUsuarioCancelamentoOptions" class="filter-options"></div>
 							<select id="npsFilterUsuarioCancelamento" class="filter-select filter-select--hidden"
-								multiple size="6" aria-label="Filtro de usuÃ¡rios de cancelamento"></select>
+								multiple size="6" aria-label="Filtro de usuários de cancelamento"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
 							<span>Motivo</span>
@@ -1139,12 +1125,12 @@
 								aria-label="Filtro de motivos de cancelamento"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
-							<span>ServiÃ§o</span>
+							<span>Serviço</span>
 							<input id="npsFilterServicoSearch" class="filter-search" type="text"
-								placeholder="Buscar serviÃ§o..." />
+								placeholder="Buscar serviço..." />
 							<div id="npsFilterServicoOptions" class="filter-options"></div>
 							<select id="npsFilterServico" class="filter-select filter-select--hidden" multiple size="6"
-								aria-label="Filtro de serviÃ§os cancelados"></select>
+								aria-label="Filtro de serviços cancelados"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
 							<span>Cidade</span>
@@ -1163,9 +1149,9 @@
 								aria-label="Filtro de bairros"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
-							<span>MÃªs</span>
+							<span>Mês</span>
 							<input id="npsFilterMesSearch" class="filter-search" type="text"
-								placeholder="Buscar mÃªs..." />
+								placeholder="Buscar mês..." />
 							<div id="npsFilterMesOptions" class="filter-options"></div>
 							<select id="npsFilterMes" class="filter-select filter-select--hidden" multiple size="6"
 								aria-label="Filtro de meses"></select>
@@ -1180,7 +1166,7 @@
 			<section class="card">
 				<div class="card__title-wrap">
 					<h2>KPIs de Cancelamento</h2>
-					<p class="status">Volume total, principal motivo, serviÃ§o mais cancelado e longevidade mÃ©dia dos
+					<p class="status">Volume total, principal motivo, serviço mais cancelado e longevidade média dos
 						clientes perdidos.</p>
 				</div>
 				<div class="nps-pillars-grid">
@@ -1189,15 +1175,15 @@
 						<div class="nps-metric-list">
 							<div class="nps-metric">
 								<span class="nps-metric__label">Total cancelamentos</span>
-								<strong id="canc-total" class="nps-metric__value">â€”</strong>
+								<strong id="canc-total" class="nps-metric__value">—</strong>
 							</div>
 							<div class="nps-metric">
 								<span class="nps-metric__label">Principal motivo</span>
-								<strong id="canc-top-motivo" class="nps-metric__value">â€”</strong>
+								<strong id="canc-top-motivo" class="nps-metric__value">—</strong>
 							</div>
 							<div class="nps-metric">
 								<span class="nps-metric__label">Cidade com mais cancelamentos</span>
-								<strong id="canc-top-cidade" class="nps-metric__value">â€”</strong>
+								<strong id="canc-top-cidade" class="nps-metric__value">—</strong>
 							</div>
 						</div>
 					</article>
@@ -1205,16 +1191,16 @@
 						<h3>&#128230; Serviço</h3>
 						<div class="nps-metric-list">
 							<div class="nps-metric">
-								<span class="nps-metric__label">ServiÃ§o mais cancelado</span>
-								<strong id="canc-top-servico" class="nps-metric__value">â€”</strong>
+								<span class="nps-metric__label">Serviço mais cancelado</span>
+								<strong id="canc-top-servico" class="nps-metric__value">—</strong>
 							</div>
 							<div class="nps-metric">
-								<span class="nps-metric__label">InadimplÃªncia</span>
-								<strong id="canc-pct-inadimplencia" class="nps-metric__value">â€”</strong>
+								<span class="nps-metric__label">Inadimplência</span>
+								<strong id="canc-pct-inadimplencia" class="nps-metric__value">—</strong>
 							</div>
 							<div class="nps-metric">
-								<span class="nps-metric__label">MudanÃ§a de Cidade</span>
-								<strong id="canc-pct-mudanca-cidade" class="nps-metric__value">â€”</strong>
+								<span class="nps-metric__label">Mudança de Cidade</span>
+								<strong id="canc-pct-mudanca-cidade" class="nps-metric__value">—</strong>
 							</div>
 						</div>
 					</article>
@@ -1222,12 +1208,12 @@
 						<h3>&#128100; Cliente</h3>
 						<div class="nps-metric-list">
 							<div class="nps-metric">
-								<span class="nps-metric__label">Longevidade mÃ©dia</span>
-								<strong id="canc-long-media" class="nps-metric__value">â€”</strong>
+								<span class="nps-metric__label">Longevidade média</span>
+								<strong id="canc-long-media" class="nps-metric__value">—</strong>
 							</div>
 							<div class="nps-metric">
-								<span class="nps-metric__label">InsatisfaÃ§Ã£o</span>
-								<strong id="canc-pct-insatisfacao" class="nps-metric__value">â€”</strong>
+								<span class="nps-metric__label">Insatisfação</span>
+								<strong id="canc-pct-insatisfacao" class="nps-metric__value">—</strong>
 							</div>
 						</div>
 					</article>
@@ -1236,11 +1222,11 @@
 						<div class="nps-metric-list">
 							<div class="nps-metric">
 								<span class="nps-metric__label">Cidades atendidas</span>
-								<strong id="canc-total-cidades" class="nps-metric__value">â€”</strong>
+								<strong id="canc-total-cidades" class="nps-metric__value">—</strong>
 							</div>
 							<div class="nps-metric">
 								<span class="nps-metric__label">Bairros impactados</span>
-								<strong id="canc-total-bairros" class="nps-metric__value">â€”</strong>
+								<strong id="canc-total-bairros" class="nps-metric__value">—</strong>
 							</div>
 						</div>
 					</article>
@@ -1249,32 +1235,32 @@
 
 			<section class="card nps-cancelamento-card">
 				<div class="card__title-wrap">
-					<h2>InformaÃ§Ãµes do Cancelamento</h2>
+						<h2>Informações do Cancelamento</h2>
 					<p id="npsCancelamentoStatus" class="status">Selecione ou importe os cancelamentos para visualizar o
 						registro em destaque.</p>
 				</div>
 				<div class="nps-cancelamento-grid">
 					<div class="nps-cancelamento-field nps-cancelamento-field--wide">
 						<span class="nps-cancelamento-label">nome_razaosocial</span>
-						<strong id="npsCancelamentoNome" class="nps-cancelamento-value">â€”</strong>
+							<strong id="npsCancelamentoNome" class="nps-cancelamento-value">—</strong>
 					</div>
 					<div class="nps-cancelamento-field">
 						<span class="nps-cancelamento-label">motivo_cancelamento</span>
-						<strong id="npsCancelamentoMotivo" class="nps-cancelamento-value">â€”</strong>
+							<strong id="npsCancelamentoMotivo" class="nps-cancelamento-value">—</strong>
 					</div>
 					<div class="nps-cancelamento-field">
 						<span class="nps-cancelamento-label">data_habilitacao</span>
-						<strong id="npsCancelamentoDataHabilitacao" class="nps-cancelamento-value">â€”</strong>
+							<strong id="npsCancelamentoDataHabilitacao" class="nps-cancelamento-value">—</strong>
 					</div>
 					<div class="nps-cancelamento-field nps-cancelamento-field--wide">
 						<span class="nps-cancelamento-label">obs_cancelamento</span>
-						<p id="npsCancelamentoObs" class="nps-cancelamento-text">â€”</p>
+							<p id="npsCancelamentoObs" class="nps-cancelamento-text">—</p>
 					</div>
 				</div>
 				<div class="nps-cancelamento-list-card">
 					<div class="card__title-wrap card__title-wrap--compact">
 						<div>
-							<h3>Ãšltimos Cancelamentos</h3>
+							<h3>Últimos Cancelamentos</h3>
 							<p class="status">Clique em um item para trocar o destaque acima.</p>
 						</div>
 						<p id="npsCancelamentoListaStatus" class="status">0 itens</p>
@@ -1283,9 +1269,9 @@
 					<div class="nps-cancelamento-paginacao">
 						<button id="npsCancelamentoPaginaAnterior" class="secondary-button"
 							type="button">Anterior</button>
-						<span id="npsCancelamentoPaginaLabel" class="status">PÃ¡gina 0 de 0</span>
+						<span id="npsCancelamentoPaginaLabel" class="status">Página 0 de 0</span>
 						<button id="npsCancelamentoPaginaProxima" class="secondary-button"
-							type="button">PrÃ³xima</button>
+							type="button">Próxima</button>
 					</div>
 				</div>
 			</section>
@@ -1294,20 +1280,20 @@
 				<div class="card__title-wrap">
 					<h2>Calculadora de Churn Rate</h2>
 					<p id="churnCalcStatus" class="status">Informe os valores manualmente para calcular a Taxa de
-						EvasÃ£o
+						Evasão
 						de Clientes.</p>
 				</div>
 				<div class="nps-churn-grid">
 					<label class="field">
-						<span>Clientes no inÃ­cio do perÃ­odo</span>
+						<span>Clientes no início do período</span>
 						<input id="churnInicioInput" type="number" min="0" step="1" placeholder="Ex: 1200" />
 					</label>
 					<label class="field">
-						<span>Cancelamentos EvitÃ¡veis (CrÃ­tico)</span>
+						<span>Cancelamentos Evitáveis (Crítico)</span>
 						<input id="churnEvitavelInput" type="number" min="0" step="1" placeholder="Ex: 18" />
 					</label>
 					<label class="field">
-						<span>Cancelamentos InevitÃ¡veis (InvoluntÃ¡rio)</span>
+						<span>Cancelamentos Inevitáveis (Involuntário)</span>
 						<input id="churnInevitavelInput" type="number" min="0" step="1" placeholder="Ex: 7" />
 					</label>
 				</div>
@@ -1318,46 +1304,46 @@
 				<div class="nps-churn-result" aria-live="polite">
 					<div class="nps-metric">
 						<span class="nps-metric__label">1. Churn Bruto (Total)</span>
-						<strong id="churnBrutoValue" class="nps-metric__value">â€”</strong>
+							<strong id="churnBrutoValue" class="nps-metric__value">—</strong>
 					</div>
 					<div class="nps-metric">
-						<span class="nps-metric__label">2. Churn EvitÃ¡vel (CrÃ­tico)</span>
-						<strong id="churnEvitavelValue" class="nps-metric__value">â€”</strong>
+							<span class="nps-metric__label">2. Churn Evitável (Crítico)</span>
+							<strong id="churnEvitavelValue" class="nps-metric__value">—</strong>
 					</div>
 					<div class="nps-metric">
-						<span class="nps-metric__label">3. Churn InevitÃ¡vel (InvoluntÃ¡rio)</span>
-						<strong id="churnInevitavelValue" class="nps-metric__value">â€”</strong>
+							<span class="nps-metric__label">3. Churn Inevitável (Involuntário)</span>
+							<strong id="churnInevitavelValue" class="nps-metric__value">—</strong>
 					</div>
 				</div>
 			</section>
 
-			<!-- GrÃ¡ficos -->
+			<!-- Gráficos -->
 			<div class="nps-charts-grid">
 				<section class="card chart-card nps-chart-card">
 					<h2>Motivos de Cancelamento</h2>
-					<canvas id="cancMotivoChart" aria-label="GrÃ¡fico de motivos de cancelamento" role="img"></canvas>
+					<canvas id="cancMotivoChart" aria-label="Gráfico de motivos de cancelamento" role="img"></canvas>
 				</section>
 				<section class="card chart-card nps-chart-card">
-					<h2>ServiÃ§os Cancelados</h2>
-					<canvas id="cancServicoChart" aria-label="GrÃ¡fico de distribuiÃ§Ã£o por serviÃ§o"
+					<h2>Serviços Cancelados</h2>
+					<canvas id="cancServicoChart" aria-label="Gráfico de distribuição por serviço"
 						role="img"></canvas>
 				</section>
 				<section class="card chart-card nps-chart-card">
 					<h2>Cancelamentos por Cidade</h2>
-					<canvas id="cancCidadeChart" aria-label="GrÃ¡fico de cancelamentos por cidade" role="img"></canvas>
+					<canvas id="cancCidadeChart" aria-label="Gráfico de cancelamentos por cidade" role="img"></canvas>
 				</section>
 				<section class="card chart-card nps-chart-card">
 					<h2>Longevidade dos Clientes</h2>
-					<canvas id="cancLongevidadeChart" aria-label="GrÃ¡fico de longevidade dos clientes cancelados"
+					<canvas id="cancLongevidadeChart" aria-label="Gráfico de longevidade dos clientes cancelados"
 						role="img"></canvas>
 				</section>
 				<section class="card chart-card nps-chart-card">
-					<h2>Cancelamentos por MÃªs</h2>
-					<canvas id="cancMensalChart" aria-label="GrÃ¡fico de cancelamentos por mÃªs" role="img"></canvas>
+					<h2>Cancelamentos por Mês</h2>
+					<canvas id="cancMensalChart" aria-label="Gráfico de cancelamentos por mês" role="img"></canvas>
 				</section>
 				<section class="card chart-card nps-chart-card">
 					<h2>Top Bairros</h2>
-					<canvas id="cancBairroChart" aria-label="GrÃ¡fico de cancelamentos por bairro" role="img"></canvas>
+					<canvas id="cancBairroChart" aria-label="Gráfico de cancelamentos por bairro" role="img"></canvas>
 				</section>
 			</div>
 
@@ -1365,7 +1351,7 @@
 			<section class="card nps-ranking-card">
 				<div class="card__title-wrap">
 					<h2>Ranking de Motivos</h2>
-					<p class="status">DistribuiÃ§Ã£o completa dos motivos de cancelamento com percentual sobre o total.
+					<p class="status">Distribuição completa dos motivos de cancelamento com percentual sobre o total.
 					</p>
 				</div>
 				<div id="cancRankingMotivos" class="nps-ranking-list"></div>
@@ -1376,21 +1362,21 @@
 			<section class="card nps-hero-card">
 				<div class="card__title-wrap">
 					<div>
-						<p class="eyebrow">Pesquisa de SatisfaÃ§Ã£o</p>
+						<p class="eyebrow">Pesquisa de Satisfação</p>
 						<h2>Dashboard de Pesquisa (CSAT)</h2>
-						<p class="subtitle">Acompanhe satisfaÃ§Ã£o, performance de agentes, operaÃ§Ã£o, eficiÃªncia de
+						<p class="subtitle">Acompanhe satisfação, performance de agentes, operação, eficiência de
 							tempo
 							e auditoria de notas baixas.</p>
 					</div>
-					<p id="pesquisaStatus" class="status" role="status" aria-live="polite">Importe o relatÃ³rio de
+					<p id="pesquisaStatus" class="status" role="status" aria-live="polite">Importe o relatório de
 						pesquisa (CSV ou XLSX) para iniciar.</p>
 				</div>
 				<div class="import-entry">
 					<div class="import-entry__header">
 						<div>
-							<h3>ImportaÃ§Ã£o do relatÃ³rio de pesquisa</h3>
-							<p>Colunas esperadas: <strong>Data, Entrada, OpÃ§Ã£o, Resposta, Agente, ServiÃ§o,
-									ClassificaÃ§Ã£o, Canal, Protocolo/Cod., Nome e Telefone</strong>.</p>
+							<h3>Importação do relatório de pesquisa</h3>
+							<p>Colunas esperadas: <strong>Data, Entrada, Opção, Resposta, Agente, Serviço,
+									Classificação, Canal, Protocolo/Cod., Nome e Telefone</strong>.</p>
 						</div>
 						<label class="file-picker">
 							<input id="pesquisaArquivoInput" type="file"
@@ -1399,7 +1385,7 @@
 						</label>
 					</div>
 					<div class="import-entry__actions">
-						<button id="pesquisaImportButton" class="add-button" type="button">Importar relatÃ³rio</button>
+						<button id="pesquisaImportButton" class="add-button" type="button">Importar relatório</button>
 						<button id="pesquisaClearButton" class="secondary-button" type="button">Limpar dados</button>
 					</div>
 					<p id="pesquisaFileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo
@@ -1408,12 +1394,12 @@
 				<div class="filter-toggle-wrap">
 					<button id="pesquisaToggleFilterSectionButton" class="secondary-button" type="button"
 						aria-expanded="false" aria-controls="pesquisaFilterSection" disabled>Filtros de
-						AnÃ¡lise</button>
+						Análise</button>
 				</div>
 				<div id="pesquisaFilterSection" class="import-entry filter-section--hidden">
 					<div class="import-entry__header">
-						<h3>Filtros de AnÃ¡lise</h3>
-						<p>Filtre por agente, serviÃ§o, classificaÃ§Ã£o, canal, nota e data para anÃ¡lises direcionadas.
+						<h3>Filtros de Análise</h3>
+						<p>Filtre por agente, serviço, classificação, canal, nota e data para análises direcionadas.
 						</p>
 					</div>
 					<div class="mapping-grid">
@@ -1426,20 +1412,20 @@
 								size="6" aria-label="Filtro de agente"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
-							<span>ServiÃ§o</span>
+							<span>Serviço</span>
 							<input id="pesquisaFilterServicoSearch" class="filter-search" type="text"
-								placeholder="Buscar serviÃ§o..." />
+								placeholder="Buscar serviço..." />
 							<div id="pesquisaFilterServicoOptions" class="filter-options"></div>
 							<select id="pesquisaFilterServico" class="filter-select filter-select--hidden" multiple
-								size="6" aria-label="Filtro de serviÃ§o"></select>
+								size="6" aria-label="Filtro de serviço"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
-							<span>ClassificaÃ§Ã£o</span>
+							<span>Classificação</span>
 							<input id="pesquisaFilterClassificacaoSearch" class="filter-search" type="text"
-								placeholder="Buscar classificaÃ§Ã£o..." />
+								placeholder="Buscar classificação..." />
 							<div id="pesquisaFilterClassificacaoOptions" class="filter-options"></div>
 							<select id="pesquisaFilterClassificacao" class="filter-select filter-select--hidden"
-								multiple size="6" aria-label="Filtro de classificaÃ§Ã£o"></select>
+								multiple size="6" aria-label="Filtro de classificação"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
 							<span>Canal</span>
@@ -1450,7 +1436,7 @@
 								size="6" aria-label="Filtro de canal"></select>
 						</label>
 						<label class="mapping-field mapping-field--filter">
-							<span>Nota (OpÃ§Ã£o)</span>
+							<span>Nota (Opção)</span>
 							<input id="pesquisaFilterNotaSearch" class="filter-search" type="text"
 								placeholder="Buscar nota..." />
 							<div id="pesquisaFilterNotaOptions" class="filter-options"></div>
@@ -1475,59 +1461,59 @@
 			<section class="card">
 				<div class="card__title-wrap">
 					<h2>Resumo Executivo</h2>
-					<p class="status">Principais indicadores de satisfaÃ§Ã£o, volume e eficiÃªncia.</p>
+					<p class="status">Principais indicadores de satisfação, volume e eficiência.</p>
 				</div>
 				<div class="pesquisa-kpi-grid">
-					<div class="kpi-card"><span class="kpi-card__label">Nota MÃ©dia (CSAT)</span><span
-							id="pesquisaKpiNotaMedia" class="kpi-card__value">â€”</span></div>
-					<div class="kpi-card"><span class="kpi-card__label">Total de AvaliaÃ§Ãµes</span><span
-							id="pesquisaKpiTotal" class="kpi-card__value">â€”</span></div>
+					<div class="kpi-card"><span class="kpi-card__label">Nota Média (CSAT)</span><span
+							id="pesquisaKpiNotaMedia" class="kpi-card__value">—</span></div>
+					<div class="kpi-card"><span class="kpi-card__label">Total de Avaliações</span><span
+							id="pesquisaKpiTotal" class="kpi-card__value">—</span></div>
 					<div class="kpi-card kpi-card--warn"><span class="kpi-card__label">Sem Agente
-							Identificado</span><span id="pesquisaKpiSemAgente" class="kpi-card__value">â€”</span></div>
-					<div class="kpi-card kpi-card--info"><span class="kpi-card__label">Tempo MÃ©dio de
-							Atendimento</span><span id="pesquisaKpiTempoMedio" class="kpi-card__value">â€”</span></div>
+							Identificado</span><span id="pesquisaKpiSemAgente" class="kpi-card__value">—</span></div>
+					<div class="kpi-card kpi-card--info"><span class="kpi-card__label">Tempo Médio de
+							Atendimento</span><span id="pesquisaKpiTempoMedio" class="kpi-card__value">—</span></div>
 				</div>
 			</section>
 
 			<div class="analytics-grid">
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
-						<h2>DistribuiÃ§Ã£o de AvaliaÃ§Ãµes</h2>
-						<p id="pesquisaDistribuicaoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<h2>Distribuição de Avaliações</h2>
+						<p id="pesquisaDistribuicaoStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaDistribuicaoChart"
-							aria-label="DistribuiÃ§Ã£o de avaliaÃ§Ãµes" role="img"></canvas></div>
+							aria-label="Distribuição de avaliações" role="img"></canvas></div>
 				</section>
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
-						<h2>EvoluÃ§Ã£o por Data</h2>
+						<h2>Evolução por Data</h2>
 						<div class="card__actions card__actions--compact">
 							<label class="periodo-filter">
-								<span>VisÃ£o</span>
-								<select id="pesquisaEvolucaoAgrupamento" aria-label="Selecionar visÃ£o da evoluÃ§Ã£o">
+								<span>Visão</span>
+								<select id="pesquisaEvolucaoAgrupamento" aria-label="Selecionar visão da evolução">
 									<option value="dia">Por dia</option>
-									<option value="mes">Por mÃªs</option>
+									<option value="mes">Por mês</option>
 								</select>
 							</label>
 							<label class="periodo-filter" id="pesquisaEvolucaoMesWrap">
-								<span>MÃªs</span>
-								<select id="pesquisaEvolucaoMes" aria-label="Selecionar mÃªs da evoluÃ§Ã£o diÃ¡ria">
+								<span>Mês</span>
+								<select id="pesquisaEvolucaoMes" aria-label="Selecionar mês da evolução diária">
 									<option value="">Todos</option>
 								</select>
 							</label>
 						</div>
-						<p id="pesquisaEvolucaoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<p id="pesquisaEvolucaoStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaEvolucaoChart"
-							aria-label="EvoluÃ§Ã£o por data" role="img"></canvas></div>
+							aria-label="Evolução por data" role="img"></canvas></div>
 				</section>
 			</div>
 
 			<div class="analytics-grid">
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
-						<h2>Desempenho por Agente (Nota MÃ©dia)</h2>
-						<p id="pesquisaAgenteMediaStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<h2>Desempenho por Agente (Nota Média)</h2>
+						<p id="pesquisaAgenteMediaStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaAgenteMediaChart"
 							aria-label="Desempenho por agente" role="img"></canvas></div>
@@ -1535,7 +1521,7 @@
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
 						<h2>Volume por Agente</h2>
-						<p id="pesquisaAgenteVolumeStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<p id="pesquisaAgenteVolumeStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaAgenteVolumeChart"
 							aria-label="Volume por agente" role="img"></canvas></div>
@@ -1545,19 +1531,19 @@
 			<div class="analytics-grid">
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
-						<h2>SatisfaÃ§Ã£o por Setor</h2>
-						<p id="pesquisaSetorStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<h2>Satisfação por Setor</h2>
+						<p id="pesquisaSetorStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaSetorChart"
-							aria-label="SatisfaÃ§Ã£o por setor" role="img"></canvas></div>
+							aria-label="Satisfação por setor" role="img"></canvas></div>
 				</section>
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
-						<h2>ClassificaÃ§Ã£o x Nota MÃ©dia</h2>
-						<p id="pesquisaClassificacaoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<h2>Classificação x Nota Média</h2>
+						<p id="pesquisaClassificacaoStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaClassificacaoChart"
-							aria-label="ClassificaÃ§Ã£o por nota mÃ©dia" role="img"></canvas></div>
+							aria-label="Classificação por nota média" role="img"></canvas></div>
 				</section>
 			</div>
 
@@ -1565,18 +1551,18 @@
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
 						<h2>Canal de Entrada</h2>
-						<p id="pesquisaCanalStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<p id="pesquisaCanalStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaCanalChart"
 							aria-label="Canal de entrada" role="img"></canvas></div>
 				</section>
 				<section class="card analytics-card">
 					<div class="card__title-wrap">
-						<h2>HorÃ¡rios de Pico (Entrada)</h2>
-						<p id="pesquisaPicoStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<h2>Horários de Pico (Entrada)</h2>
+						<p id="pesquisaPicoStatus" class="status">Aguardando importação.</p>
 					</div>
 					<div class="chart-wrap chart-wrap--small"><canvas id="pesquisaPicoChart"
-							aria-label="HorÃ¡rios de pico" role="img"></canvas></div>
+							aria-label="Horários de pico" role="img"></canvas></div>
 				</section>
 			</div>
 
@@ -1593,7 +1579,7 @@
 								<option value="3">3</option>
 							</select>
 						</label>
-						<p id="pesquisaAuditoriaStatus" class="status">Aguardando importaÃ§Ã£o.</p>
+						<p id="pesquisaAuditoriaStatus" class="status">Aguardando importação.</p>
 					</div>
 				</div>
 				<div class="table-wrap table-wrap--preview">
@@ -1606,7 +1592,7 @@
 								<th>Nome</th>
 								<th>Telefone</th>
 								<th>Agente</th>
-								<th>ServiÃ§o</th>
+								<th>Serviço</th>
 								<th>Data</th>
 							</tr>
 						</thead>
@@ -1620,9 +1606,9 @@
 				<div class="pesquisa-auditoria-paginacao">
 					<button id="pesquisaAuditoriaPrevBtn" class="secondary-button" type="button"
 						disabled>Anterior</button>
-					<span id="pesquisaAuditoriaPageInfo" class="status">PÃ¡gina 0 de 0</span>
+						<span id="pesquisaAuditoriaPageInfo" class="status">Página 0 de 0</span>
 					<button id="pesquisaAuditoriaNextBtn" class="secondary-button" type="button"
-						disabled>PrÃ³xima</button>
+						disabled>Próxima</button>
 				</div>
 			</section>
 		</section>
@@ -1701,7 +1687,7 @@
 					<span id="kpiConversoes" class="status-card__value status-card__value--success">0</span>
 				</div>
 				<div class="status-card">
-					<span class="status-card__label">Taxa de ConversÃ£o</span>
+					<span class="status-card__label">Taxa de Conversão</span>
 					<span id="kpiTaxaConversao" class="status-card__value">0%</span>
 				</div>
 				<div class="status-card">
@@ -1724,7 +1710,7 @@
 					<canvas id="chartOrigemContato"></canvas>
 				</div>
 				<div class="card chart-card analytics-card--wide">
-					<h2>ConversÃµes por Vendedor</h2>
+					<h2>Conversões por Vendedor</h2>
 					<canvas id="chartVendasVendedor"></canvas>
 				</div>
 			</div>
@@ -1787,10 +1773,10 @@
 			</section>
 		</section>
 
-		<!-- ===================== PAINEL ORDENS DE SERVIÃ‡O ===================== -->
+			<!-- ===================== PAINEL ORDENS DE SERVIÇO ===================== -->
 		<section id="panelOs" class="dashboard-panel" aria-labelledby="tabOs" hidden>
 
-			<!-- ImportaÃ§Ã£o -->
+			<!-- Importação -->
 			<div class="card import-card">
 				<div class="card__title-wrap">
 					<h2>&#128295; Ordens de Serviço</h2>
@@ -1817,7 +1803,7 @@
 			<!-- Filtros -->
 			<div class="card import-card">
 				<div class="card__title-wrap">
-					<h2>Filtros de AnÃ¡lise</h2>
+					<h2>Filtros de Análise</h2>
 					<button id="osLimparFiltros" class="secondary-button" type="button">Limpar Filtros</button>
 				</div>
 				<div class="mapping-grid">
@@ -1900,7 +1886,7 @@
 				</div>
 			</div>
 
-			<!-- GrÃ¡ficos gerais -->
+			<!-- Gráficos gerais -->
 			<div class="analytics-grid analytics-grid--charts">
 				<div class="card chart-card">
 					<h2>Status das OS</h2>
@@ -2035,15 +2021,15 @@
 					<table class="preview-table" aria-label="Tabela de SLA das OS">
 						<thead>
 							<tr>
-								<th>NÂº OS</th>
+								<th>Nº OS</th>
 								<th>Cliente</th>
-								<th>TÃ©cnico</th>
+								<th>Técnico</th>
 								<th>Tipo</th>
 								<th>Status</th>
 								<th>Data Programada</th>
-								<th>InÃ­cio Exec.</th>
-								<th>TÃ©rmino Exec.</th>
-								<th>DuraÃ§Ã£o (min)</th>
+								<th>Início Exec.</th>
+								<th>Término Exec.</th>
+								<th>Duração (min)</th>
 								<th>Cidade</th>
 							</tr>
 						</thead>
@@ -2056,9 +2042,9 @@
 				</div>
 				<div class="import-entry__actions" style="margin-top: 12px; justify-content: space-between;">
 					<div style="display: flex; align-items: center; gap: 10px;">
-						<p id="osSlaPageInfo" class="status" style="margin:0;">PÃ¡gina 0 de 0</p>
+						<p id="osSlaPageInfo" class="status" style="margin:0;">Página 0 de 0</p>
 						<label class="mapping-field" style="margin:0; min-width:170px;">
-							<span>Linhas por pÃ¡gina</span>
+							<span>Linhas por página</span>
 							<select id="osSlaTamanhoPagina">
 								<option value="10">10</option>
 								<option value="25" selected>25</option>
@@ -2069,7 +2055,7 @@
 					</div>
 					<div style="display: flex; gap: 8px;">
 						<button id="osSlaAnterior" class="secondary-button" type="button">Anterior</button>
-						<button id="osSlaProxima" class="secondary-button" type="button">PrÃ³xima</button>
+						<button id="osSlaProxima" class="secondary-button" type="button">Próxima</button>
 					</div>
 				</div>
 			</div>
@@ -2139,18 +2125,17 @@
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-	<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
 	<!-- Regras de cada painel -->
-	<script src="app.js"></script>
-	<script src="app_chat.js"></script>
-	<script src="app_nps.js"></script>
-	<script src="app_pesquisa.js"></script>
-	<script src="app_prospectos.js"></script>
-	<script src="app_os.js"></script>
+	<script src="assets/js/dashboard/core/app.js"></script>
+	<script src="assets/js/dashboard/features/chat/app_chat.js"></script>
+	<script src="assets/js/dashboard/features/nps/app_nps.js"></script>
+	<script src="assets/js/dashboard/features/pesquisa/app_pesquisa.js"></script>
+	<script src="assets/js/dashboard/features/prospectos/app_prospectos.js"></script>
+	<script src="assets/js/dashboard/features/os/app_os.js"></script>
 
 	<!-- Orquestracao das abas (executar por ultimo) -->
-	<script src="app_tabs.js"></script>
+	<script src="assets/js/dashboard/core/app_tabs.js"></script>
 </body>
 
 </html>
