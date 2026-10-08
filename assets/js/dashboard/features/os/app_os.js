@@ -72,6 +72,17 @@
     ];
 
     let chartTempoMedioOs = null;
+
+    // Publica os registros de OS no escopo global para outros paineis
+    // (ex.: aba Atendimentos, cruzamento com relatorio Libre) consumirem
+    // sem duplicar import/parse. Dispara um evento para quem quiser reagir.
+    function publicarOsGlobal() {
+        window.osRegistrosImportados = registrosBase;
+        document.dispatchEvent(new CustomEvent("os-dados-atualizados", {
+            detail: { total: registrosBase.length }
+        }));
+    }
+
     // ── Persistência ─────────────────────────────────────────
     function salvar(registros, nomeArquivo) {
         try {
@@ -883,6 +894,11 @@
         return { olt, pon };
     }
 
+    // Exposto para outros paineis (ex.: cruzamento com relatorio Libre na
+    // aba Atendimentos) usarem exatamente a mesma logica de extracao de
+    // OLT/PON a partir de um registro de OS.
+    window.extrairOltEPonOs = extrairOltEPon;
+
     function montarResumoPorOlt(registros) {
         const mapa = new Map();
 
@@ -1021,6 +1037,7 @@
             salvar(registrosBase, file.name);
             popularFiltros(registrosBase);
             renderTudo();
+            publicarOsGlobal();
             elImportStatus.textContent = `${registrosBase.length} ordens importadas com sucesso.`;
         } catch (err) {
             console.error("[OS] Erro ao importar:", err);
@@ -1044,6 +1061,7 @@
         elFileStatusText && (elFileStatusText.textContent = "Nenhum arquivo selecionado");
         elImportStatus && (elImportStatus.textContent = "Dados limpos.");
         renderTudo();
+        publicarOsGlobal();
     }
 
     // ── Inicialização ─────────────────────────────────────────
@@ -1055,6 +1073,7 @@
             registrosAtuais = [...salvos];
             popularFiltros(salvos);
             renderTudo();
+            publicarOsGlobal();
             try {
                 const meta = JSON.parse(localStorage.getItem(STORAGE_META) || "{}");
                 elImportStatus.textContent = `${salvos.length} OS carregadas (${meta.fileName || "cache"}).`;

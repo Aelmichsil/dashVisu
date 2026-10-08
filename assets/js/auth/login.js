@@ -7,7 +7,7 @@
     "use strict";
 
     const DOMINIO_PERMITIDO = "nossanet.net.br";
-    const REGEX_DOMINIO = new RegExp("@" + DOMINIO_PERMITIDO.replace(".", "\\.") + "$", "i");
+    const REGEX_DOMINIO = new RegExp("@" + DOMINIO_PERMITIDO.replace(/\./g, "\\.") + "$", "i");
 
     const supabaseUrl = document.querySelector('meta[name="supabase-url"]')?.content;
     const supabaseKey = document.querySelector('meta[name="supabase-key"]')?.content;
@@ -37,6 +37,11 @@
         limparMensagem();
     }
 
+    function obterUrlRedirect() {
+        if (window.location.protocol === "file:") return undefined;
+        return window.location.origin + window.location.pathname;
+    }
+
     // Alterna abas/links internos
     document.querySelectorAll("[data-view]").forEach(el => {
         el.addEventListener("click", () => mostrarView(el.dataset.view));
@@ -48,7 +53,8 @@
         if (texto.includes("user already registered") || texto.includes("already registered")) return "Este e-mail já possui cadastro.";
         if (texto.includes("password should be at least")) return "A senha deve ter pelo menos 8 caracteres.";
         if (texto.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).";
-        if (texto.includes("dominio") || texto.includes("domain")) return "Cadastro permitido apenas para e-mails @" + DOMINIO_PERMITIDO + ".";
+        if (texto.includes("redirect url") || texto.includes("redirect_to")) return "URL de redirecionamento não autorizada no Supabase.";
+        if (texto.includes("email domain") || texto.includes("domínio não permitido")) return "Cadastro permitido apenas para e-mails @" + DOMINIO_PERMITIDO + ".";
         return msg || "Ocorreu um erro. Tente novamente.";
     }
 
@@ -109,14 +115,16 @@
         }
 
         definirCarregando(botao, true, "Criar conta");
+        const redirectUrl = obterUrlRedirect();
         const { data, error } = await supabase.auth.signUp({
             email,
             password: senha,
-            options: { emailRedirectTo: window.location.origin + window.location.pathname.replace("login.html", "") + "login.html" }
+            ...(redirectUrl ? { options: { emailRedirectTo: redirectUrl } } : {})
         });
         definirCarregando(botao, false, "Criar conta");
 
         if (error) {
+            console.error("Erro Supabase Auth (signUp):", error);
             mostrarMensagem(traduzirErro(error.message), "erro");
             return;
         }
@@ -147,8 +155,9 @@
         }
 
         definirCarregando(botao, true, "Enviar link de recuperação");
+        const redirectUrl = obterUrlRedirect();
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + window.location.pathname
+            ...(redirectUrl ? { redirectTo: redirectUrl } : {})
         });
         definirCarregando(botao, false, "Enviar link de recuperação");
 

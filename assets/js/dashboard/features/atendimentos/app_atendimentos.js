@@ -1,140 +1,313 @@
 // ============================================================
-// app_atendimentos.js — Painel de Atendimentos Reagendados
-// Regra: OS com status "aguardando_agendamento" e data_inicio_programado < atual
+// app_atendimentos.js — Aba Atendimentos
+// Cruzamento: relatório de portas do Libre (erros de interface)
+// x Ordens de Serviço de Manutenção, agrupado por OLT, porta e
+// localidade (cidade/bairro), para saber se um pico de chamados
+// de manutenção coincide com uma interface reportando erro.
 // ============================================================
 
 (function () {
     "use strict";
 
-    // Elementos do DOM
-    const elTableBody = document.getElementById("atendimentosReagendadosTableBody");
-    const elStatusText = document.getElementById("atendimentosReagendadosStatus");
-    const elCardsContainer = document.getElementById("atendimentosReagendadosCards");
+    // ── Elementos de UI ──────────────────────────────────────
+    const elFileInput = document.getElementById("libreArquivoInput");
+    const elImportBtn = document.getElementById("libreImportButton");
+    const elLimparBtn = document.getElementById("libreLimparButton");
+    const elFileStatus = document.getElementById("libreFileStatus");
+    const elStatus = document.getElementById("libreStatus");
+    const elResumo = document.getElementById("libreResumo");
+    const elSearch = document.getElementById("libreSearch");
+    const elTableBody = document.getElementById("libreTableBody");
 
-    /**
-     * Converte string de data padrão Hubsoft/OS para objeto Date formal
-     */
-    function parsarDataProgramada(valor) {
-        if (!valor) return null;
-        // Se já for Date
-        if (Object.prototype.toString.call(valor) === "[object Date]") return valor;
+    // Se o HTML desta seção ainda não foi adicionado à página, não faz nada.
+    if (!elTableBody) return;
 
-        const texto = String(valor).trim();
-        // dd/mm/yyyy
-        const match = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (match) {
-            return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 0, 0, 0);
-        }
+    // ── Estado ───────────────────────────────────────────────
+    const STORAGE_KEY = "libre-portas-v1";
+    const STORAGE_META = "libre-portas-meta-v1";
 
-        const iso = new Date(texto);
-        return isNaN(iso.getTime()) ? null : iso;
+    let libreRegistros = []; // portas normalizadas do relatório Libre
+
+    // ── Persistência ─────────────────────────────────────────
+    function salvar(registros, nomeArquivo) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+            localStorage.setItem(STORAGE_META, JSON.stringify({
+                fileName: nomeArquivo,
+                importedAt: new Date().toISOString(),
+                total: registros.length
+            }));
+        } catch (_) { }
     }
 
-    /**
-     * Executa o cruzamento inteligente de dados entre Atendimentos e OS
-     */
-    function processarAtendimentosReagendados() {
-        // Puxa as variáveis globais populadas pelo app.js através da aba Hubsoft
-        const atendimentos = window.registrosImportados || [];
-        const osRegistros = window.osRegistrosImportados || [];
+    function carregar() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (_) { return []; }
+    }
 
-        if (atendimentos.length === 0 || osRegistros.length === 0) {
-            elStatusText.textContent = "Aguardando importação dos arquivos de Atendimentos e OS na aba Hubsoft.";
-            return;
-        }
+    function limparStorage() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(STORAGE_META);
+        } catch (_) { }
+    }
 
-        const dataAtual = new Date();
-        dataAtual.setHours(0, 0, 0, 0); // Zera horas para comparação puramente por data
+    // ── Utilitários ──────────────────────────────────────────
+    function escapeHtml(str) {
+        return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[c]));
+    }
 
-        // Filtrar e cruzar dados
-        const reagendados = [];
+    function normalizarNumero(valor) {
+        const n = Number(String(valor ?? "").replace(/[^\d.-]/g, ""));
+        return isNaN(n) ? 0 : n;
+    }
 
-        atendimentos.forEach(atend => {
-            // Localiza a OS vinculada ao atendimento (via descrição ou número de OS mapeado)
-            const descricaoFechamento = atend.descricaoFechamento || "";
+    function normalizarChave(v) {
+        return String(v || "").trim().toUpperCase();
+    }
 
-            // Reutiliza a inteligência de busca aproximada do ecossistema
-            let vinculoOs = null;
-            if (typeof window.obterOsPorDescricaoFechamento === "function") {
-                vinculoOs = window.obterOsPorDescricaoFechamento(descricaoFechamento);
-            }
+    // Uma OS é considerada "de manutenção" pelo tipo de OS (ex.:
+    // "MANUTENÇÃO", "S - MANUTENÇÃO PROGRAMADA"), igual ao padrão de
+    // classificação já usado no diagnóstico de rede do painel OS.
+    function ehManutencao(tipo) {
+        return String(tipo || "").toLowerCase().indexOf("manuten") !== -1;
+    }
 
-            // Se achou a OS indexada, aplica as regras de negócio solicitadas
-            if (vinculoOs && vinculoOs.registro) {
-                const os = vinculoOs.registro;
-                const statusOs = String(os.status || "").toLowerCase().trim();
-                const dataProg = parsarDataProgramada(os.dataProgramada || os.data_programada);
-                
-                // Regra de Ouro: status === aguardando_agendamento E data_programada < atual
-                if (statusOs === "aguardando_agendamento" && dataProg && dataProg < dataAtual) {
-                    reagendados.push({
-                        atendimento: atend,
-                        os: os,
-                        dataProgFormatada: os.dataRealizada || "—"
-                    });
+    // ── Parsing do relatório Libre (ports_controller) ─────────
+    function normalizarLibreRegistro(raw) {
+        const k = (nome) => {
+            const chave = Object.keys(raw).find(c =>
+                c.toLowerCase().replace(/[\s_]/g, "") === nome.toLowerCase().replace(/[\s_]/g, "")
+            );
+            return chave ? String(raw[chave] ?? "").trim() : "";
+        };
+
+        const hostname = k("Hostname");
+        const port = k("Port");
+        const status = k("Status").toLowerCase();
+        const adminStatus = k("AdminStatus").toLowerCase();
+        const inErrors = normalizarNumero(k("InErrors"));
+        const outErrors = normalizarNumero(k("OutErrors"));
+        const descricao = k("Description");
+
+        // Extrai o padrão quadro/placa/porta (3 números) do campo Port,
+        // ex.: "gpon_1/4/1" -> "1/4/1" — mesmo padrão usado no cruzamento
+        // OLT/PON do painel de Ordens de Serviço, para que as chaves batam.
+        const m = port.match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/);
+        const pon = m ? `${m[1]}/${m[2]}/${m[3]}` : (port || "Sem porta identificada");
+
+        return {
+            hostname: hostname || "Sem hostname",
+            porta: port || "—",
+            pon,
+            status,
+            adminStatus,
+            inErrors,
+            outErrors,
+            descricao,
+            temErro: inErrors > 0 || outErrors > 0
+        };
+    }
+
+    async function lerArquivo(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const XLSX = window.XLSX;
+                    const wb = XLSX.read(e.target.result, { type: "binary" });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+                    resolve(rows);
+                } catch (err) {
+                    reject(err);
                 }
-            }
+            };
+            reader.onerror = reject;
+            reader.readAsBinaryString(file);
+        });
+    }
+
+    async function importar() {
+        const file = elFileInput?.files?.[0];
+        if (!file) { alert("Selecione o arquivo CSV exportado do Libre (ports_controller)."); return; }
+
+        elStatus.textContent = "Importando…";
+        elFileStatus.textContent = file.name;
+
+        try {
+            const rows = await lerArquivo(file);
+            libreRegistros = rows.map(normalizarLibreRegistro).filter(r => r.hostname !== "Sem hostname" || r.porta !== "—");
+            salvar(libreRegistros, file.name);
+            renderTudo();
+        } catch (err) {
+            console.error("[Atendimentos/Libre] Erro ao importar:", err);
+            elStatus.textContent = "Erro ao importar o arquivo. Verifique se é o CSV exportado do Libre.";
+        }
+    }
+
+    function limpar() {
+        limparStorage();
+        libreRegistros = [];
+        elFileStatus && (elFileStatus.textContent = "Nenhum arquivo selecionado");
+        renderTudo();
+    }
+
+    // ── Cruzamento: portas do Libre x OS de manutenção ────────
+    function montarCruzamento() {
+        const osRegistros = window.osRegistrosImportados || [];
+        const extrair = window.extrairOltEPonOs; // exposto pelo app_os.js
+
+        const mapa = new Map();
+        libreRegistros.forEach(r => {
+            const chave = `${normalizarChave(r.hostname)}||${r.pon}`;
+            mapa.set(chave, {
+                hostname: r.hostname,
+                porta: r.porta,
+                status: r.status,
+                adminStatus: r.adminStatus,
+                inErrors: r.inErrors,
+                outErrors: r.outErrors,
+                temErro: r.temErro,
+                qtdManutencao: 0,
+                localidades: new Map() // "Cidade — Bairro" -> qtd
+            });
         });
 
-        renderizarCardsKPI(reagendados.length);
-        renderizarTabela(reagendados);
+        if (typeof extrair === "function") {
+            osRegistros.forEach(os => {
+                if (!ehManutencao(os.tipo)) return;
+                const { olt, pon } = extrair(os);
+                const chave = `${normalizarChave(olt)}||${pon}`;
+                const linha = mapa.get(chave);
+                if (!linha) return; // interface não está no relatório Libre importado
+                linha.qtdManutencao += 1;
+                const local = `${os.cidade || "Cidade não informada"}${os.bairro ? " — " + os.bairro : ""}`;
+                linha.localidades.set(local, (linha.localidades.get(local) || 0) + 1);
+            });
+        }
+
+        return Array.from(mapa.values());
     }
 
-    function renderizarCardsKPI(total) {
-        if (!elCardsContainer) return;
-        elCardsContainer.innerHTML = `
-            <div class="status-card status-card--pending">
-                <span class="status-card__label">OS Reagendadas em Atraso</span>
-                <span class="status-card__value">${total}</span>
-            </div>
-        `;
-    }
+    // ── Renderização ───────────────────────────────────────────
+    function renderResumo(linhas) {
+        if (!elResumo) return;
 
-    function renderizarTabela(dados) {
-        if (!elTableBody) return;
-
-        if (dados.length === 0) {
-            elStatusText.textContent = "Nenhuma ordem de serviço reagendada antes da data atual encontrada.";
-            elTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px;">Nenhum atendimento retido na regra operacional.</td></tr>`;
+        if (!linhas.length) {
+            elResumo.innerHTML = "";
             return;
         }
 
-        elStatusText.textContent = `${dados.length} caso(s) retido(s) que necessitam de intervenção técnica imediata.`;
+        const comErro = linhas.filter(l => l.temErro).length;
+        const comManutencao = linhas.filter(l => l.qtdManutencao > 0).length;
+        const comErroEManutencao = linhas.filter(l => l.temErro && l.qtdManutencao > 0).length;
+        const totalManutencaoVinculados = linhas.reduce((s, l) => s + l.qtdManutencao, 0);
 
-        elTableBody.innerHTML = dados.map(item => {
-            const a = item.atendimento;
-            const o = item.os;
+        elResumo.innerHTML = `
+            <div class="bairro-summary__cards">
+                <div class="bairro-summary__card"><span class="bairro-summary__value">${linhas.length}</span><span class="bairro-summary__label">Portas no relatório Libre</span></div>
+                <div class="bairro-summary__card"><span class="bairro-summary__value">${comErro}</span><span class="bairro-summary__label">Portas com erro (In/Out)</span></div>
+                <div class="bairro-summary__card"><span class="bairro-summary__value">${comManutencao}</span><span class="bairro-summary__label">Portas com OS de manutenção</span></div>
+                <div class="bairro-summary__card bairro-summary__card--highlight"><span class="bairro-summary__value">${comErroEManutencao}</span><span class="bairro-summary__label">Portas com erro E manutenção</span></div>
+                <div class="bairro-summary__card"><span class="bairro-summary__value">${totalManutencaoVinculados}</span><span class="bairro-summary__label">Atendimentos de manutenção vinculados</span></div>
+            </div>`;
+    }
 
+    function formatarLocalidades(mapaLocalidades) {
+        const entradas = Array.from(mapaLocalidades.entries()).sort((a, b) => b[1] - a[1]);
+        if (!entradas.length) return "—";
+        const top = entradas.slice(0, 3).map(([local, qtd]) => `${escapeHtml(local)} (${qtd})`);
+        const resto = entradas.length - 3;
+        return top.join("<br>") + (resto > 0 ? `<br><span style="color: var(--ui-muted); font-size: 0.72rem;">+${resto} outra(s)</span>` : "");
+    }
+
+    function renderTabela(linhas, busca) {
+        if (!elTableBody) return;
+
+        if (!libreRegistros.length) {
+            elStatus.textContent = "Importe o relatório de portas exportado do Libre (ports_controller) para começar.";
+            elTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px;">Nenhum relatório do Libre importado ainda.</td></tr>`;
+            return;
+        }
+
+        let filtradas = linhas;
+        const termo = (busca || "").toLowerCase().trim();
+        if (termo) {
+            filtradas = filtradas.filter(l =>
+                l.hostname.toLowerCase().includes(termo) || l.porta.toLowerCase().includes(termo)
+            );
+        }
+
+        filtradas = [...filtradas].sort((a, b) => {
+            if (b.qtdManutencao !== a.qtdManutencao) return b.qtdManutencao - a.qtdManutencao;
+            return (b.inErrors + b.outErrors) - (a.inErrors + a.outErrors);
+        });
+
+        const semOsCarregada = !(window.osRegistrosImportados || []).length;
+        elStatus.textContent = semOsCarregada
+            ? `${libreRegistros.length} porta(s) do Libre importadas. Importe também o relatório de OS na aba Ordens de Serviço para cruzar com os atendimentos de manutenção.`
+            : `${filtradas.length} porta(s) exibidas. Ordenado por quantidade de atendimentos de manutenção — se a porta com mais chamados também aparece com erros de In/Out, o problema provavelmente está na interface.`;
+
+        if (!filtradas.length) {
+            elTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:24px;">Nenhuma porta encontrada para a busca.</td></tr>`;
+            return;
+        }
+
+        elTableBody.innerHTML = filtradas.map(l => {
+            const destaque = l.temErro && l.qtdManutencao > 0;
+            const statusBadge = l.status === "up" ? "badge--green" : "badge--red";
             return `
-                <tr>
-                    <td style="font-weight: 600; font-size: 0.85rem;">
-                        OS: #${o.numeroOs || "—"}<br>
-                        <span style="color: var(--ui-muted); font-size: 0.75rem;">Prot: ${a.codigoCliente || "—"}</span>
-                    </td>
-                    <td>${a.nomeCliente || "—"}</td>
-                    <td>
-                        <span class="recorrente-pagina-badge">${a.numeroPlano || "—"}</span>
-                    </td>
-                    <td style="font-size: 0.8rem;">
-                        ${a.cidade || "—"}<br>
-                        <span style="color: var(--ui-muted); font-size: 0.75rem;">${a.bairro || "—"}</span>
-                    </td>
-                    <td style="color: var(--ui-danger); font-weight: 700;">${item.dataProgFormatada}</td>
-                    <td>
-                        <span class="badge badge--yellow">${o.status || "aguardando_agendamento"}</span>
-                    </td>
-                    <td style="font-size: 0.8rem;">${a.usuarioAbertura || "—"}</td>
-                </tr>
-            `;
+                <tr${destaque ? ' style="background: rgba(255, 126, 141, 0.07);"' : ""}>
+                    <td style="font-size:0.8rem;">${escapeHtml(l.hostname)}</td>
+                    <td style="font-size:0.8rem;">${escapeHtml(l.porta)}</td>
+                    <td><span class="badge ${statusBadge}">${escapeHtml(l.status || "—")}</span></td>
+                    <td style="text-align:center; ${l.inErrors > 0 ? 'color: var(--ui-danger); font-weight:700;' : ''}">${l.inErrors.toLocaleString("pt-BR")}</td>
+                    <td style="text-align:center; ${l.outErrors > 0 ? 'color: var(--ui-danger); font-weight:700;' : ''}">${l.outErrors.toLocaleString("pt-BR")}</td>
+                    <td style="text-align:center; font-weight:700;">${l.qtdManutencao || "—"}</td>
+                    <td style="font-size:0.78rem;">${formatarLocalidades(l.localidades)}</td>
+                </tr>`;
         }).join("");
     }
 
-    // Registra a função de atualização no escopo global para o app.js invocá-la ao carregar arquivos
-    window.atualizarAbaAtendimentosReagendados = processarAtendimentosReagendados;
+    function renderTudo() {
+        const linhas = montarCruzamento();
+        renderResumo(linhas);
+        renderTabela(linhas, elSearch?.value || "");
+    }
 
-    // Monitora a ativação da aba para recalcular em real-time
-    document.getElementById("tabAtendimentos")?.addEventListener("click", () => {
-        processarAtendimentosReagendados();
-    });
+    // ── Inicialização ─────────────────────────────────────────
+    function init() {
+        const salvos = carregar();
+        if (salvos.length > 0) {
+            libreRegistros = salvos;
+            try {
+                const meta = JSON.parse(localStorage.getItem(STORAGE_META) || "{}");
+                elFileStatus && (elFileStatus.textContent = meta.fileName || "cache");
+            } catch (_) { }
+        }
+        renderTudo();
+
+        elFileInput?.addEventListener("change", () => {
+            elFileStatus && (elFileStatus.textContent = elFileInput.files?.[0]?.name || "Nenhum arquivo selecionado");
+        });
+        elImportBtn?.addEventListener("click", importar);
+        elLimparBtn?.addEventListener("click", limpar);
+        elSearch?.addEventListener("input", () => renderTudo());
+
+        // Recalcula sempre que o painel de OS publicar dados novos
+        // (import, limpeza, ou carregamento inicial a partir do cache).
+        document.addEventListener("os-dados-atualizados", () => renderTudo());
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
 
 })();

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR utf-8">
 
 <head>
@@ -20,9 +20,9 @@
 	<link rel="stylesheet" href="assets/css/styles.css" />
 	<link rel="icon" href="favicon.png" type="image/x-icon" />
 	<!-- Bibliotecas de Exportacao -->
-	<script defer src=".../html2canvas.min.js"></script>
-	<script defer src=".../jspdf.umd.min.js"></script>
-	<script defer src=".../pptxgen.umd.min.js"></script>
+	<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+	<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script defer src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
 	<!-- Autenticacao: carregado cedo e de forma sincrona para bloquear acesso nao autenticado -->
 	<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -1060,6 +1060,59 @@
 				</div>
 				<div class="status-abertos-wrap">
 					<div id="atendimentosFinalizadosLista" class="status-abertos-lista"></div>
+				</div>
+			</section>
+
+			<!-- Cruzamento: relatorio de portas do Libre x OS de manutencao -->
+			<section class="card import-card">
+				<div class="card__title-wrap">
+					<h2>Erros de Interface (Libre) x Atendimentos de Manutenção</h2>
+					<p id="libreStatus" class="status">Importe o relatório de portas exportado do Libre (ports_controller) para começar.</p>
+				</div>
+				<p style="font-size:0.8rem;color:var(--muted);margin:-6px 0 12px;">Cruza as portas reportadas pelo Libre com as Ordens de Serviço cujo tipo é "manutenção" (mesma OLT e mesma porta gpon), agrupando por localidade. Requer também o relatório de OS importado na aba Ordens de Serviço.</p>
+
+				<div class="import-entry">
+					<div class="import-entry__header">
+						<div>
+							<h3>Importação do relatório do Libre</h3>
+							<p>Use o CSV exportado do controlador de portas do Libre (colunas: <strong>Hostname, Port, Status, In Errors, Out Errors</strong>, entre outras).</p>
+						</div>
+						<label class="file-picker">
+							<input id="libreArquivoInput" type="file" accept=".csv,text/csv" />
+							<span>Selecionar arquivo</span>
+						</label>
+					</div>
+					<div class="import-entry__actions">
+						<button id="libreImportButton" class="add-button" type="button">Importar relatório</button>
+						<button id="libreLimparButton" class="secondary-button" type="button">Limpar dados</button>
+					</div>
+					<p id="libreFileStatus" class="file-status" role="status" aria-live="polite">Nenhum arquivo selecionado.</p>
+				</div>
+
+				<div id="libreResumo" class="bairro-summary"></div>
+
+				<div class="import-entry__actions" style="margin: 10px 0;">
+					<input id="libreSearch" type="text" class="filter-search" placeholder="Buscar hostname (OLT) ou porta..." style="min-width: 220px;" />
+				</div>
+				<div class="table-wrap table-wrap--preview">
+					<table class="preview-table" aria-label="Cruzamento de portas Libre com OS de manutencao">
+						<thead>
+							<tr>
+								<th>Hostname (OLT)</th>
+								<th>Porta</th>
+								<th>Status</th>
+								<th>In Errors</th>
+								<th>Out Errors</th>
+								<th>Qtd. Manutenção</th>
+								<th>Localidades</th>
+							</tr>
+						</thead>
+						<tbody id="libreTableBody">
+							<tr>
+								<td colspan="7">Nenhum dado carregado ainda.</td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
 			</section>
 		</section>
@@ -2133,6 +2186,7 @@
 	<script src="assets/js/dashboard/features/pesquisa/app_pesquisa.js"></script>
 	<script src="assets/js/dashboard/features/prospectos/app_prospectos.js"></script>
 	<script src="assets/js/dashboard/features/os/app_os.js"></script>
+	<script src="assets/js/dashboard/features/atendimentos/app_atendimentos.js"></script>
 
 	<!-- Orquestracao das abas (executar por ultimo) -->
 	<script src="assets/js/dashboard/core/app_tabs.js"></script>
