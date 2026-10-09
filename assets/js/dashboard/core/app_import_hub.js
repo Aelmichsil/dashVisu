@@ -18,18 +18,10 @@
         prospectos: null
     };
 
-    // Elementos da interface do Modal
-    const modal = document.getElementById("globalImportModal");
-    const btnOpenModal = document.getElementById("btnOpenGlobalImport");
-    const btnCloseModal = document.getElementById("btnCloseGlobalImport");
-    const dropZone = document.getElementById("globalDropZone");
-    const fileInput = document.getElementById("globalFileInput");
-    const btnProcess = document.getElementById("btnProcessGlobalData");
-    const btnClear = document.getElementById("btnClearGlobalData");
-    const reportBadges = document.querySelectorAll(".report-badge");
-
-    // Arquivos em espera para processamento
-    let arquivosPpendentes = [];
+    // Função utilitária para obter elementos atualizados do DOM
+    function getEl(id) {
+        return document.getElementById(id);
+    }
 
     // ------------------------------------------------------------
     // INICIALIZAÇÃO
@@ -41,66 +33,87 @@
     }
 
     function vincularEventos() {
-        if (btnOpenModal) btnOpenModal.addEventListener("click", abrirModal);
-        if (btnCloseModal) btnCloseModal.addEventListener("click", fecharModal);
+        const btnOpenModal = getEl("btnOpenGlobalImport");
+        const btnCloseModal = getEl("btnCloseGlobalImport");
+        const modal = getEl("globalImportModal");
+        const fileInput = getEl("globalFileInput");
+        const dropZone = getEl("globalDropZone");
+        const btnProcess = getEl("btnProcessGlobalData");
+        const btnClear = getEl("btnClearGlobalData");
+
+        if (btnOpenModal) {
+            btnOpenModal.onclick = abrirModal;
+        }
+
+        if (btnCloseModal) {
+            btnCloseModal.onclick = fecharModal;
+        }
 
         if (modal) {
-            modal.addEventListener("click", (e) => {
+            modal.onclick = (e) => {
                 if (e.target === modal) fecharModal();
-            });
+            };
         }
 
         if (fileInput) {
-            fileInput.addEventListener("change", (e) => {
+            fileInput.onchange = (e) => {
                 const files = Array.from(e.target.files || []);
                 processarArquivosSelecionados(files);
-            });
+            };
         }
 
         if (dropZone) {
-            dropZone.addEventListener("dragover", (e) => {
+            dropZone.ondragover = (e) => {
                 e.preventDefault();
                 dropZone.classList.add("global-dropzone--active");
-            });
+            };
 
-            dropZone.addEventListener("dragleave", () => {
+            dropZone.ondragleave = () => {
                 dropZone.classList.remove("global-dropzone--active");
-            });
+            };
 
-            dropZone.addEventListener("drop", (e) => {
+            dropZone.ondrop = (e) => {
                 e.preventDefault();
                 dropZone.classList.remove("global-dropzone--active");
                 const files = Array.from(e.dataTransfer.files || []);
                 processarArquivosSelecionados(files);
-            });
+            };
         }
 
         if (btnProcess) {
-            btnProcess.addEventListener("click", aplicarEAtualizarDashboard);
+            btnProcess.onclick = aplicarEAtualizarDashboard;
         }
 
         if (btnClear) {
-            btnClear.addEventListener("click", limparTodosDados);
+            btnClear.onclick = limparTodosDados;
         }
     }
 
     function abrirModal() {
-        if (modal) modal.style.display = "flex";
+        const modal = getEl("globalImportModal");
+        if (modal) {
+            modal.style.display = "flex";
+        }
     }
 
     function fecharModal() {
-        if (modal) modal.style.display = "none";
+        const modal = getEl("globalImportModal");
+        if (modal) {
+            modal.style.display = "none";
+        }
     }
 
     function verificarAberturaAutomatica() {
-        // Se nenhum dado estiver carregado na memória ou cache, abre o modal automaticamente
         const possuiDados = Object.values(window.GlobalDashboardHub).some(val => val !== null);
         if (!possuiDados) {
             setTimeout(() => {
                 abrirModal();
-            }, 800);
+            }, 600);
         }
     }
+
+    // Expoe abrirModal globalmente
+    window.abrirCentralImportacao = abrirModal;
 
     // ------------------------------------------------------------
     // PROCESSAMENTO E DETECÇÃO INTELIGENTE DE ARQUIVOS
@@ -159,11 +172,7 @@
         }
 
         // 6. Hubsoft / Atendimentos (Padrão)
-        if (cabecalhosStr.includes("PROTOCOLO") || cabecalhosStr.includes("SETOR") || cabecalhosStr.includes("ATENDENTE") || cabecalhosStr.includes("SLA") || cabecalhosStr.includes("CIDADE")) {
-            return "hubsoft";
-        }
-
-        return "hubsoft"; // Fallback para Hubsoft/Atendimentos
+        return "hubsoft";
     }
 
     function lerArquivoExcelOuCsv(file) {
@@ -208,6 +217,7 @@
     }
 
     function verificarBotaoProcessar() {
+        const btnProcess = getEl("btnProcessGlobalData");
         const possuiDados = Object.values(window.GlobalDashboardHub).some(val => val !== null);
         if (btnProcess) {
             btnProcess.disabled = !possuiDados;
@@ -220,22 +230,16 @@
     function aplicarEAtualizarDashboard() {
         const hubData = window.GlobalDashboardHub;
 
-        // 1. Injeta os arquivos nos elementos de input das abas originais para disparar a renderização nativa de cada módulo
         distribuirParaModulos(hubData);
-
-        // 2. Salva o estado no LocalStorage para persistir o carregamento
         salvarCache(hubData);
 
-        // 3. Notifica o usuário e fecha o modal
         fecharModal();
         exibirNotificacaoSucesso("Dados importados e distribuídos com sucesso para todas as abas!");
     }
 
     function distribuirParaModulos(hubData) {
-        // Dispara evento customizado para notificar todos os módulos do dashboard
         window.dispatchEvent(new CustomEvent("dashboardDataUpdated", { detail: hubData }));
 
-        // Passa arquivos brutos ou datasets processados para os inputs originais se existirem
         if (hubData.hubsoft && hubData.hubsoft.rawFile) {
             injetarArquivoNoInput("arquivoInput", hubData.hubsoft.rawFile);
         }
@@ -245,7 +249,7 @@
     }
 
     function injetarArquivoNoInput(idInput, file) {
-        const input = document.getElementById(idInput);
+        const input = getEl(idInput);
         if (!input) return;
 
         try {
@@ -254,7 +258,7 @@
             input.files = dataTransfer.files;
             input.dispatchEvent(new Event("change", { bubbles: true }));
         } catch (e) {
-            console.log(`Injeção nativa em ${idInput} usando fallback de evento.`);
+            console.log(`Injeção nativa em ${idInput} usando fallback.`);
         }
     }
 
@@ -323,7 +327,6 @@
         }, 3500);
     }
 
-    // Inicializa quando o DOM estiver pronto
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", init);
     } else {
