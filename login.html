@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -25,11 +25,7 @@
 	<div class="auth-shell">
 		<div class="auth-card">
 			<h1>Dashboard de Atendimentos</h1>
-
-			<div class="auth-tabs" id="authTabs">
-				<button type="button" class="auth-tab auth-tab--active" data-view="viewLogin">Entrar</button>
-				<button type="button" class="auth-tab" data-view="viewCadastro">Cadastrar</button>
-			</div>
+			<p class="auth-hint" style="margin-bottom: 1.5rem; text-align: center;">Acesso restrito a usuários autorizados</p>
 
 			<p id="authMessage" class="auth-message"></p>
 
@@ -47,25 +43,6 @@
 					<button type="button" data-view="viewRecuperar">Esqueci minha senha</button>
 				</div>
 				<button type="submit" class="add-button auth-submit" id="btnLogin">Entrar</button>
-			</form>
-
-			<!-- CADASTRO -->
-			<form id="viewCadastro" class="auth-view">
-				<label class="auth-field">
-					<span>E-mail corporativo</span>
-					<input type="email" id="cadastroEmail" placeholder="usuario@nossanet.net.br" required autocomplete="username" />
-				</label>
-				<label class="auth-field">
-					<span>Criar senha</span>
-					<input type="password" id="cadastroSenha" placeholder="Mínimo 8 caracteres" required minlength="8"
-						autocomplete="new-password" />
-				</label>
-				<label class="auth-field">
-					<span>Confirmar senha</span>
-					<input type="password" id="cadastroSenhaConfirma" placeholder="Repita a senha" required minlength="8"
-						autocomplete="new-password" />
-				</label>
-				<button type="submit" class="add-button auth-submit" id="btnCadastro">Criar conta</button>
 			</form>
 
 			<!-- RECUPERAR SENHA -->

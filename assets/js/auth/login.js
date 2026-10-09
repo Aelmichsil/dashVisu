@@ -1,5 +1,5 @@
 // ============================================================
-// login.js — Autenticação (login / cadastro / recuperação)
+// login.js — Autenticação (Apenas Login e Recuperação de Senha)
 // Restrito a e-mails do domínio @nossanet.net.br
 // ============================================================
 
@@ -14,7 +14,6 @@
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     const elMensagem = document.getElementById("authMessage");
-    const abas = document.querySelectorAll(".auth-tab");
     const views = document.querySelectorAll(".auth-view");
 
     function validarDominio(email) {
@@ -33,7 +32,6 @@
 
     function mostrarView(idView) {
         views.forEach(v => v.classList.toggle("auth-view--active", v.id === idView));
-        abas.forEach(a => a.classList.toggle("auth-tab--active", a.dataset.view === idView));
         limparMensagem();
     }
 
@@ -50,11 +48,8 @@
     function traduzirErro(msg) {
         const texto = String(msg || "").toLowerCase();
         if (texto.includes("invalid login credentials")) return "E-mail ou senha inválidos.";
-        if (texto.includes("user already registered") || texto.includes("already registered")) return "Este e-mail já possui cadastro.";
         if (texto.includes("password should be at least")) return "A senha deve ter pelo menos 8 caracteres.";
-        if (texto.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).";
-        if (texto.includes("redirect url") || texto.includes("redirect_to")) return "URL de redirecionamento não autorizada no Supabase.";
-        if (texto.includes("email domain") || texto.includes("domínio não permitido")) return "Cadastro permitido apenas para e-mails @" + DOMINIO_PERMITIDO + ".";
+        if (texto.includes("email not confirmed")) return "E-mail não confirmado ou pendente de ativação.";
         return msg || "Ocorreu um erro. Tente novamente.";
     }
 
@@ -83,61 +78,12 @@
         definirCarregando(botao, false, "Entrar");
 
         if (error) {
+            console.error("Erro Supabase Auth (signIn):", error);
             mostrarMensagem(traduzirErro(error.message), "erro");
             return;
         }
 
         window.location.href = "index.html";
-    });
-
-    // ------------------------------------------------------------
-    // CADASTRO
-    // ------------------------------------------------------------
-    document.getElementById("viewCadastro").addEventListener("submit", async (ev) => {
-        ev.preventDefault();
-        limparMensagem();
-        const email = document.getElementById("cadastroEmail").value.trim();
-        const senha = document.getElementById("cadastroSenha").value;
-        const senhaConfirma = document.getElementById("cadastroSenhaConfirma").value;
-        const botao = document.getElementById("btnCadastro");
-
-        if (!validarDominio(email)) {
-            mostrarMensagem("Cadastro permitido apenas para e-mails @" + DOMINIO_PERMITIDO + ".", "erro");
-            return;
-        }
-        if (senha.length < 8) {
-            mostrarMensagem("A senha deve ter pelo menos 8 caracteres.", "erro");
-            return;
-        }
-        if (senha !== senhaConfirma) {
-            mostrarMensagem("As senhas não coincidem.", "erro");
-            return;
-        }
-
-        definirCarregando(botao, true, "Criar conta");
-        const redirectUrl = obterUrlRedirect();
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password: senha,
-            ...(redirectUrl ? { options: { emailRedirectTo: redirectUrl } } : {})
-        });
-        definirCarregando(botao, false, "Criar conta");
-
-        if (error) {
-            console.error("Erro Supabase Auth (signUp):", error);
-            mostrarMensagem(traduzirErro(error.message), "erro");
-            return;
-        }
-
-        if (data?.session) {
-            // Confirmação de e-mail desativada no projeto: já entra direto
-            window.location.href = "index.html";
-            return;
-        }
-
-        mostrarMensagem("Cadastro criado! Verifique seu e-mail corporativo para confirmar a conta antes de entrar.", "sucesso");
-        document.getElementById("viewCadastro").reset();
-        setTimeout(() => mostrarView("viewLogin"), 2500);
     });
 
     // ------------------------------------------------------------
@@ -162,6 +108,7 @@
         definirCarregando(botao, false, "Enviar link de recuperação");
 
         if (error) {
+            console.error("Erro Supabase Auth (resetPassword):", error);
             mostrarMensagem(traduzirErro(error.message), "erro");
             return;
         }
@@ -194,6 +141,7 @@
         definirCarregando(botao, false, "Salvar nova senha");
 
         if (error) {
+            console.error("Erro Supabase Auth (updateUser):", error);
             mostrarMensagem(traduzirErro(error.message), "erro");
             return;
         }
@@ -208,7 +156,6 @@
     // ------------------------------------------------------------
     supabase.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY") {
-            document.querySelectorAll(".auth-tab").forEach(a => a.style.display = "none");
             mostrarView("viewNovaSenha");
             mostrarMensagem("Defina sua nova senha abaixo.", "sucesso");
         }
@@ -216,7 +163,7 @@
 
     (async function verificarSessaoExistente() {
         const hash = window.location.hash || "";
-        if (hash.includes("type=recovery")) return; // deixa o listener acima cuidar disso
+        if (hash.includes("type=recovery")) return;
         const { data } = await supabase.auth.getSession();
         if (data?.session) {
             window.location.href = "index.html";
