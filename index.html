@@ -61,7 +61,8 @@
 
 		<section id="panelHubsoft" class="dashboard-panel" aria-labelledby="tabHubsoft">
 			<div class="dashboard__export-buttons"
-				style="display: flex; gap: 10px; margin: 15px 0; justify-content: center;">
+				style="display: flex; gap: 10px; margin: 15px 0; justify-content: center; flex-wrap: wrap;">
+				<button id="btnOpenGlobalImport" class="add-button header-import-btn" type="button" title="Abrir Central de Importação de Relatórios">📁 Central de Importação de Dados</button>
 				<button id="exportPdfBtn" class="add-button" type="button" title="Exportar dashboard para PDF">⬇
 					PDF</button>
 				<button id="exportPptxBtn" class="add-button" type="button"
@@ -2187,9 +2188,75 @@
 	<script src="assets/js/dashboard/features/prospectos/app_prospectos.js"></script>
 	<script src="assets/js/dashboard/features/os/app_os.js"></script>
 	<script src="assets/js/dashboard/features/atendimentos/app_atendimentos.js"></script>
+	<script src="assets/js/dashboard/core/app_import_hub.js"></script>
 
 	<!-- Orquestracao das abas (executar por ultimo) -->
 	<script src="assets/js/dashboard/core/app_tabs.js"></script>
+	<!-- Modal Central de Importação Inteligente de Dados -->
+	<div id="globalImportModal" class="modal-overlay" style="display: none;">
+		<div class="modal-card">
+			<header class="modal-card__header">
+				<h2>📁 Central de Importação Inteligente de Dados</h2>
+				<button id="btnCloseGlobalImport" class="modal-card__close" type="button" aria-label="Fechar">&times;</button>
+			</header>
+
+			<div class="modal-card__body">
+				<p class="modal-hint">Arraste seus relatórios do Excel (.xlsx, .xls) ou CSV. O sistema identifica automaticamente o tipo de dado e distribui para todas as abas do dashboard sem precisar importar manualmente em cada uma.</p>
+
+				<!-- Drop Zone Central -->
+				<div id="globalDropZone" class="global-dropzone">
+					<input type="file" id="globalFileInput" multiple accept=".xlsx,.xls,.csv" style="display:none;" />
+					<div class="dropzone-icon">📥</div>
+					<h3>Arraste e solte seus arquivos aqui</h3>
+					<p>ou <button type="button" class="dropzone-browse-btn" onclick="document.getElementById('globalFileInput').click()">Clique para selecionar arquivos</button></p>
+					<span class="dropzone-types">Suporta múltiplos arquivos simultâneos (.xlsx, .csv)</span>
+				</div>
+
+				<!-- Lista de relatórios detectados e status -->
+				<div class="detected-reports-container">
+					<h4>Status dos Relatórios Carregados:</h4>
+					<div class="report-badges" id="reportBadges">
+						<div class="report-badge" data-type="hubsoft">
+							<span class="badge-icon">📋</span>
+							<span class="badge-title">Atendimentos / Hubsoft</span>
+							<span class="badge-status status-pending">Pendente</span>
+						</div>
+						<div class="report-badge" data-type="os">
+							<span class="badge-icon">🛠️</span>
+							<span class="badge-title">Ordens de Serviço (O.S.)</span>
+							<span class="badge-status status-pending">Pendente</span>
+						</div>
+						<div class="report-badge" data-type="chat">
+							<span class="badge-icon">💬</span>
+							<span class="badge-title">Chat</span>
+							<span class="badge-status status-pending">Pendente</span>
+						</div>
+						<div class="report-badge" data-type="nps">
+							<span class="badge-icon">⭐</span>
+							<span class="badge-title">NPS / Avaliações</span>
+							<span class="badge-status status-pending">Pendente</span>
+						</div>
+						<div class="report-badge" data-type="pesquisa">
+							<span class="badge-icon">🧙‍♂️</span>
+							<span class="badge-title">Pesquisa de Satisfação</span>
+							<span class="badge-status status-pending">Pendente</span>
+						</div>
+						<div class="report-badge" data-type="prospectos">
+							<span class="badge-icon">🎯</span>
+							<span class="badge-title">Prospectos</span>
+							<span class="badge-status status-pending">Pendente</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<footer class="modal-card__footer">
+				<button id="btnClearGlobalData" class="btn-secondary" type="button">🗑️ Limpar Dados</button>
+				<button id="btnProcessGlobalData" class="add-button" type="button" disabled>✅ Processar & Atualizar Dashboard</button>
+			</footer>
+		</div>
+	</div>
+
 </body>
 
 </html>
