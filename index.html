@@ -296,6 +296,8 @@
 										✕ Limpar Equipe
 									</button>
 								</div>
+								<div id="filtroEquipeSuporteMembros" class="team-member-options" hidden
+									aria-label="Integrantes da equipe de Suporte"></div>
 							</div>
 
 							<button id="applyFiltersBtn" class="add-button" type="button">Filtrar Dados</button>
@@ -414,14 +416,18 @@
 
 							<section class="sla-subpanel" aria-label="SLA medio por tipo de atendimento">
 								<div class="card__title-wrap">
-									<h3 class="sla-subpanel__title">SLA Medio por Tipo de Atendimento</h3>
-									<p id="slaTipoStatus" class="status">Aguardando importacao.</p>
+									<div>
+										<h3 class="sla-subpanel__title">SLA Medio por Tipo de Atendimento</h3>
+										<p id="slaTipoStatus" class="status">Aguardando importacao.</p>
+										<p class="sla-metric-description">Média mostra o impacto geral; mediana representa o atendimento típico; moda indica o tempo mais recorrente.</p>
+									</div>
 								</div>
 								<div class="chart-wrap chart-wrap--small">
 									<canvas id="slaTipoChart" aria-label="Grafico SLA por tipo de atendimento"
 										role="img"></canvas>
 								</div>
 							</section>
+
 						</div>
 					</section>
 
@@ -434,6 +440,28 @@
 							<div id="clientesPendentesLista" class="clientes-pendentes-lista"></div>
 						</div>
 					</aside>
+
+					<section class="sla-subpanel sla-subpanel--scatter" aria-label="Volume e SLA medio por tipo de atendimento">
+						<div class="card__title-wrap">
+							<h3 class="sla-subpanel__title">Volume x SLA Medio por Tipo</h3>
+							<p id="slaDispersaoTipoStatus" class="status">Aguardando importacao.</p>
+							<details class="sla-scatter-filters" aria-label="Filtros do grafico de volume e SLA">
+								<summary>Filtros</summary>
+								<div class="sla-scatter-filters__body">
+									<span class="sla-scatter-filters__label">Agrupar por</span>
+									<div class="sla-scatter-filters__modes">
+										<label><input id="slaDispersaoModoTipo" type="checkbox" checked /> Tipo de atendimento</label>
+										<label><input id="slaDispersaoModoUsuario" type="checkbox" /> Usuário de abertura</label>
+									</div>
+									<div id="slaDispersaoOpcoes" class="sla-scatter-filters__options"></div>
+								</div>
+							</details>
+						</div>
+						<div class="chart-wrap chart-wrap--small">
+							<canvas id="slaDispersaoTipoChart" aria-label="Grafico de dispersao entre volume e SLA medio por tipo de atendimento"
+								role="img"></canvas>
+						</div>
+					</section>
 				</div>
 
 				<!-- Dashboard de causas e categorizacao dos atendimentos. -->
@@ -468,7 +496,12 @@
 					<section class="card analytics-card">
 						<div class="card__title-wrap">
 							<h2>Atendimentos por Tipo</h2>
-							<p id="tipoStatus" class="status">Aguardando importacao.</p>
+							<div class="card__actions">
+								<p id="tipoStatus" class="status">Aguardando importacao.</p>
+								<button id="copyTipoAtendimentoButton" class="secondary-button copy-chart-button" type="button"
+									title="Copiar lista de atendimentos por tipo" aria-label="Copiar lista de atendimentos por tipo"
+									disabled>Copiar</button>
+							</div>
 						</div>
 						<div class="chart-wrap chart-wrap--small">
 							<canvas id="tipoChart" aria-label="Grafico de atendimentos por tipo" role="img"></canvas>

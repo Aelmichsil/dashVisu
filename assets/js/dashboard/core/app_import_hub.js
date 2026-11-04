@@ -7,6 +7,25 @@
     "use strict";
 
     const STORAGE_KEY = "nossanet_dashboard_global_data_v1";
+    const FILE_DB_NAME = "nossanet_dashboard_files_v1";
+    const FILE_DB_VERSION = 1;
+    const FILE_STORE_NAME = "imported_files";
+    const MODULE_IMPORT_STORAGE_KEYS = [
+        "atendimentos-importados-v1",
+        "atendimentos-os-v1",
+        "atendimentos-os-meta-v1",
+        "os-registros-v1",
+        "os-registros-meta-v1",
+        "chat-registros-v1",
+        "chat-estatisticas-v1",
+        "chat-arquivo-meta-v1",
+        "nps-cancelamentos-v1",
+        "nps-arquivo-meta-v1",
+        "pesquisa-registros-v1",
+        "pesquisa-registros-meta-v1",
+        "prospecto-registros-v1",
+        "prospecto-registros-meta-v1"
+    ];
 
     // Armazenamento global em memória das fontes de dados
     window.GlobalDashboardHub = window.GlobalDashboardHub || {
@@ -26,9 +45,9 @@
     // ------------------------------------------------------------
     // INICIALIZAÇÃO
     // ------------------------------------------------------------
-    function init() {
+    async function init() {
         vincularEventos();
-        carregarCacheSalvo();
+        await carregarCacheSalvo();
         verificarAberturaAutomatica();
     }
 
@@ -125,7 +144,13 @@
             const data = await lerArquivoExcelOuCsv(file);
             if (!data || data.length === 0) continue;
 
-            const tipoDetectado = identificarTipoRelatorio(data, file.name);
+            const identificacao = identificarTipoRelatorio(data, file.name);
+            const tipoDetectado = identificacao.tipo;
+
+            if (identificacao.baixaConfianca && !confirmarTipoRelatorio(file.name, identificacao)) {
+                console.warn("[Import Hub] Arquivo ignorado após confirmação manual:", file.name);
+                continue;
+            }
 
             if (tipoDetectado) {
                 window.GlobalDashboardHub[tipoDetectado] = {
@@ -134,6 +159,8 @@
                     rawFile: file
                 };
 
+                await salvarArquivoPersistido(tipoDetectado, file, data);
+
                 atualizarBadgeStatus(tipoDetectado, true, file.name, data.length);
             }
         }
@@ -141,38 +168,106 @@
         verificarBotaoProcessar();
     }
 
+    function normalizarIdentificador(valor) {
+        return String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_|_$/g, "");
+    }
+
     function identificarTipoRelatorio(linhas, nomeArquivo) {
-        const nomeUpper = String(nomeArquivo || "").toUpperCase();
-        const cabecalhos = Object.keys(linhas[0] || {}).map(c => String(c).toUpperCase());
-        const cabecalhosStr = cabecalhos.join(" ");
+        const primeiraLinha = linhas[0] || {};
+        const cabecalhos = new Set(Object.keys(primeiraLinha).map(normalizarIdentificador));
+        const nome = normalizarIdentificador(String(nomeArquivo || "").replace(/\.[^.]+$/, ""));
+        const pontuacao = {
+            hubsoft: 0,
+            os: 0,
+            chat: 0,
+            nps: 0,
+            pesquisa: 0,
+            prospectos: 0
+        };
 
-        // 1. Ordens de Serviço (O.S.)
-        if (nomeUpper.includes("OS") || nomeUpper.includes("ORDEM") || cabecalhosStr.includes("OLT") || cabecalhosStr.includes("PON") || cabecalhosStr.includes("TIPO_OS")) {
-            return "os";
-        }
+        const possui = (...nomes) => nomes.some(nomeColuna => cabecalhos.has(normalizarIdentificador(nomeColuna)));
+        const soma = (tipo, pontos, ...nomes) => {
+            if (possui(...nomes)) pontuacao[tipo] += pontos;
+        };
 
-        // 2. Chat
-        if (nomeUpper.includes("CHAT") || cabecalhosStr.includes("FILA") || cabecalhosStr.includes("TEMPO_RESPOSTA") || cabecalhosStr.includes("MENSAGENS")) {
-            return "chat";
-        }
+        // Assinaturas fortes e específicas dos relatórios reais.
+        soma("hubsoft", 7, "id_atendimento");
+        soma("hubsoft", 4, "data_abertura");
+        soma("hubsoft", 3, "tipo_atendimento");
+        soma("hubsoft", 2, "protocolo");
+        soma("hubsoft", 2, "status_fechamento");
 
-        // 3. NPS
-        if (nomeUpper.includes("NPS") || cabecalhosStr.includes("NPS") || cabecalhosStr.includes("AVALIACAO") || cabecalhosStr.includes("DETRATOR")) {
-            return "nps";
-        }
+        soma("os", 7, "id_ordem_servico");
+        soma("os", 7, "numero_ordem_servico");
+        soma("os", 4, "tipo_ordem_servico");
+        soma("os", 3, "data_termino_executado");
+        soma("os", 3, "tecnicos");
+        soma("os", 2, "olt");
+        soma("os", 2, "pon");
 
-        // 4. Pesquisa
-        if (nomeUpper.includes("PESQUISA") || cabecalhosStr.includes("QUESTIONARIO") || cabecalhosStr.includes("RESPOSTA_PESQUISA")) {
-            return "pesquisa";
-        }
+        soma("chat", 5, "fila");
+        soma("chat", 5, "tempo_resposta");
+        soma("chat", 4, "mensagens");
 
-        // 5. Prospectos
-        if (nomeUpper.includes("PROSPECTO") || nomeUpper.includes("LEAD") || cabecalhosStr.includes("VENDEDOR") || cabecalhosStr.includes("PROSPECTO")) {
-            return "prospectos";
-        }
+        soma("nps", 7, "data_cancelamento");
+        soma("nps", 7, "motivo_cancelamento");
+        soma("nps", 3, "usuario_cancelamento");
+        soma("nps", 4, "nps");
+        soma("nps", 3, "avaliacao");
+        soma("nps", 3, "detrator");
 
-        // 6. Hubsoft / Atendimentos (Padrão)
-        return "hubsoft";
+        soma("pesquisa", 6, "questionario");
+        soma("pesquisa", 6, "resposta_pesquisa");
+
+        soma("prospectos", 7, "id_prospecto");
+        soma("prospectos", 6, "prospecto");
+        soma("prospectos", 4, "crm");
+        soma("prospectos", 2, "origem");
+
+        // O nome do arquivo é apenas uma evidência auxiliar, nunca uma busca parcial.
+        if (/(^|_)ordens?_de_servico($|_)/.test(nome) || /(^|_)ordem($|_)/.test(nome)) pontuacao.os += 2;
+        if (/(^|_)atendimentos?($|_)/.test(nome)) pontuacao.hubsoft += 2;
+        if (/(^|_)(chat)($|_)/.test(nome)) pontuacao.chat += 2;
+        if (/(^|_)relatorio_atendimento_analitico(_|$)/.test(nome)) pontuacao.chat += 8;
+        if (/(^|_)(nps|cancelamento|cancelamentos)($|_)/.test(nome)) pontuacao.nps += 2;
+        if (/(^|_)(pesquisa)($|_)/.test(nome)) pontuacao.pesquisa += 2;
+        if (/(^|_)detalhamento_de_pesquisa(_|$)/.test(nome)) pontuacao.pesquisa += 8;
+        if (/(^|_)(prospecto|prospectos|lead|leads)($|_)/.test(nome)) pontuacao.prospectos += 2;
+
+        const ranking = Object.entries(pontuacao).sort((a, b) => b[1] - a[1]);
+        const [tipo, pontos] = ranking[0];
+        const segundoPontos = ranking[1][1];
+        const baixaConfianca = pontos < 7 || pontos - segundoPontos < 2;
+
+        return {
+            tipo: pontos > 0 ? tipo : "hubsoft",
+            pontuacao: pontos,
+            segundoPontos,
+            baixaConfianca,
+            ranking
+        };
+    }
+
+    function confirmarTipoRelatorio(nomeArquivo, identificacao) {
+        const rotulos = {
+            hubsoft: "Atendimentos / Hubsoft",
+            os: "Ordens de Serviço",
+            chat: "Chat",
+            nps: "NPS / Cancelamentos",
+            pesquisa: "Pesquisa de Satisfação",
+            prospectos: "Prospectos"
+        };
+        const tipo = rotulos[identificacao.tipo] || identificacao.tipo;
+        return window.confirm(
+            `Não foi possível identificar este arquivo com alta confiança:\n\n${nomeArquivo}\n\n` +
+            `A melhor correspondência foi “${tipo}” (pontuação ${identificacao.pontuacao}).\n\n` +
+            "Deseja importar usando essa categoria?"
+        );
     }
 
     function lerArquivoExcelOuCsv(file) {
@@ -245,6 +340,19 @@
         }
         if (hubData.os && hubData.os.rawFile) {
             injetarArquivoNoInput("arquivoOsInput", hubData.os.rawFile);
+            injetarArquivoNoInput("osFileInput", hubData.os.rawFile);
+        }
+        if (hubData.chat && hubData.chat.rawFile) {
+            injetarArquivoNoInput("chatArquivoInput", hubData.chat.rawFile);
+        }
+        if (hubData.nps && hubData.nps.rawFile) {
+            injetarArquivoNoInput("npsArquivoInput", hubData.nps.rawFile);
+        }
+        if (hubData.pesquisa && hubData.pesquisa.rawFile) {
+            injetarArquivoNoInput("pesquisaArquivoInput", hubData.pesquisa.rawFile);
+        }
+        if (hubData.prospectos && hubData.prospectos.rawFile) {
+            injetarArquivoNoInput("prospectoInput", hubData.prospectos.rawFile);
         }
     }
 
@@ -279,26 +387,130 @@
         }
     }
 
-    function carregarCacheSalvo() {
+    function abrirBancoArquivos() {
+        return new Promise((resolve, reject) => {
+            if (!window.indexedDB) {
+                resolve(null);
+                return;
+            }
+
+            const request = window.indexedDB.open(FILE_DB_NAME, FILE_DB_VERSION);
+            request.onupgradeneeded = () => {
+                const banco = request.result;
+                if (!banco.objectStoreNames.contains(FILE_STORE_NAME)) {
+                    banco.createObjectStore(FILE_STORE_NAME, { keyPath: "tipo" });
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function salvarArquivoPersistido(tipo, file, linhas) {
+        try {
+            const banco = await abrirBancoArquivos();
+            if (!banco) return;
+
+            const buffer = await file.arrayBuffer();
+            await new Promise((resolve, reject) => {
+                const transacao = banco.transaction(FILE_STORE_NAME, "readwrite");
+                transacao.objectStore(FILE_STORE_NAME).put({
+                    tipo,
+                    nomeArquivo: file.name,
+                    mimeType: file.type || "application/octet-stream",
+                    lastModified: file.lastModified || Date.now(),
+                    buffer,
+                    linhas,
+                    salvoEm: new Date().toISOString()
+                });
+                transacao.oncomplete = resolve;
+                transacao.onerror = () => reject(transacao.error);
+            });
+            banco.close();
+        } catch (error) {
+            console.warn("Não foi possível persistir o arquivo no IndexedDB:", error);
+        }
+    }
+
+    async function carregarArquivosPersistidos() {
+        try {
+            const banco = await abrirBancoArquivos();
+            if (!banco) return [];
+
+            const registros = await new Promise((resolve, reject) => {
+                const transacao = banco.transaction(FILE_STORE_NAME, "readonly");
+                const request = transacao.objectStore(FILE_STORE_NAME).getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+            banco.close();
+            return registros;
+        } catch (error) {
+            console.warn("Não foi possível restaurar arquivos do IndexedDB:", error);
+            return [];
+        }
+    }
+
+    async function limparArquivosPersistidos() {
+        try {
+            const banco = await abrirBancoArquivos();
+            if (!banco) return;
+
+            await new Promise((resolve, reject) => {
+                const transacao = banco.transaction(FILE_STORE_NAME, "readwrite");
+                transacao.objectStore(FILE_STORE_NAME).clear();
+                transacao.oncomplete = resolve;
+                transacao.onerror = () => reject(transacao.error);
+            });
+            banco.close();
+        } catch (error) {
+            console.warn("Não foi possível limpar arquivos do IndexedDB:", error);
+        }
+    }
+
+    async function carregarCacheSalvo() {
         try {
             const cacheStr = localStorage.getItem(STORAGE_KEY);
-            if (!cacheStr) return;
+            if (cacheStr) {
+                const cacheData = JSON.parse(cacheStr);
+                Object.keys(cacheData).forEach(tipo => {
+                    if (cacheData[tipo]) {
+                        window.GlobalDashboardHub[tipo] = cacheData[tipo];
+                        atualizarBadgeStatus(tipo, true, cacheData[tipo].nomeArquivo, cacheData[tipo].linhas.length);
+                    }
+                });
+            }
 
-            const cacheData = JSON.parse(cacheStr);
-            Object.keys(cacheData).forEach(tipo => {
-                if (cacheData[tipo]) {
-                    window.GlobalDashboardHub[tipo] = cacheData[tipo];
-                    atualizarBadgeStatus(tipo, true, cacheData[tipo].nomeArquivo, cacheData[tipo].linhas.length);
-                }
+            const arquivosPersistidos = await carregarArquivosPersistidos();
+            arquivosPersistidos.forEach((registro) => {
+                if (!registro || !registro.tipo || !registro.buffer) return;
+
+                const linhasCache = window.GlobalDashboardHub[registro.tipo]
+                    && window.GlobalDashboardHub[registro.tipo].linhas;
+                const linhas = Array.isArray(registro.linhas) && registro.linhas.length
+                    ? registro.linhas
+                    : (linhasCache || []);
+                const arquivo = new File([registro.buffer], registro.nomeArquivo, {
+                    type: registro.mimeType || "application/octet-stream",
+                    lastModified: registro.lastModified || Date.now()
+                });
+
+                window.GlobalDashboardHub[registro.tipo] = {
+                    nomeArquivo: registro.nomeArquivo,
+                    linhas,
+                    rawFile: arquivo
+                };
+                atualizarBadgeStatus(registro.tipo, true, registro.nomeArquivo, linhas.length);
             });
 
             verificarBotaoProcessar();
+            distribuirParaModulos(window.GlobalDashboardHub);
         } catch (e) {
             console.error("Erro ao carregar cache salvo:", e);
         }
     }
 
-    function limparTodosDados() {
+    async function limparTodosDados() {
         if (!confirm("Deseja realmente limpar todos os relatórios carregados?")) return;
 
         Object.keys(window.GlobalDashboardHub).forEach(key => {
@@ -307,6 +519,8 @@
         });
 
         localStorage.removeItem(STORAGE_KEY);
+        MODULE_IMPORT_STORAGE_KEYS.forEach((chave) => localStorage.removeItem(chave));
+        await limparArquivosPersistidos();
         verificarBotaoProcessar();
         window.location.reload();
     }

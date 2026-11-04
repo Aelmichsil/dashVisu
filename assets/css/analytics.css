@@ -321,6 +321,18 @@ h2 {
     outline-offset: 2px;
 }
 
+.copy-chart-button {
+    min-width: 72px;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.copy-chart-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 .manual-entry {
     display: none;
     grid-template-columns: 1fr 160px auto;
@@ -556,6 +568,153 @@ h2 {
     padding: 10px;
     font-size: 0.88rem;
     color: var(--muted);
+}
+
+.team-member-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 6px 10px;
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    border-radius: 12px;
+    background: rgba(17, 24, 39, 0.03);
+}
+
+.team-member-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.team-member-option:hover {
+    background: rgba(17, 24, 39, 0.06);
+}
+
+.team-member-option span,
+.team-member-options__empty {
+    color: var(--ink);
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+
+.team-member-options__empty {
+    color: var(--muted);
+}
+
+.sla-scatter-filters {
+    margin: 0;
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    border-radius: 12px;
+    background: rgba(17, 24, 39, 0.03);
+}
+
+.sla-scatter-filters summary {
+    padding: 10px 12px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.sla-scatter-filters summary::-webkit-details-marker {
+    display: none;
+}
+
+.sla-scatter-filters summary::after {
+    content: "+";
+    float: right;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--muted);
+}
+
+.sla-scatter-filters[open] summary {
+    border-bottom: 1px solid rgba(17, 24, 39, 0.12);
+}
+
+.sla-scatter-filters[open] summary::after {
+    content: "−";
+}
+
+.sla-scatter-filters__body {
+    padding: 10px;
+    color: var(--ui-ink, var(--ink));
+    background: var(--ui-card, var(--card));
+}
+
+.sla-scatter-layout {
+    display: grid;
+    grid-template-columns: minmax(170px, 0.38fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+.sla-scatter-layout .chart-wrap {
+    min-width: 0;
+}
+
+.sla-scatter-filters__label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.sla-scatter-filters__modes,
+.sla-scatter-filters__options {
+    display: grid;
+    gap: 6px;
+}
+
+.sla-scatter-filters__modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 8px;
+}
+
+.sla-scatter-filters label,
+.sla-scatter-filters__options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 4px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: var(--ui-ink, var(--ink));
+}
+
+.sla-scatter-filters label:hover,
+.sla-scatter-filters__options label:hover {
+    background: rgba(17, 24, 39, 0.06);
+}
+
+.sla-scatter-filters__options {
+    max-height: 116px;
+    overflow-y: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sla-scatter-filters__options span {
+    overflow-wrap: anywhere;
+}
+
+.sla-scatter-filters__empty {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+@media (max-width: 720px) {
+    .sla-scatter-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 .filter-select--hidden {
@@ -848,7 +1007,7 @@ h2 {
 
 .sla-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
     gap: 28px;
     align-items: start;
 }
@@ -858,6 +1017,31 @@ h2 {
     grid-template-columns: 1fr;
     gap: 24px;
     margin-top: 14px;
+}
+
+.sla-subpanel--scatter {
+    grid-column: 1 / -1;
+}
+
+.sla-subpanel--scatter > .card__title-wrap {
+    position: relative;
+}
+
+.sla-subpanel--scatter .sla-scatter-filters {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.sla-subpanel--scatter .sla-scatter-filters[open] .sla-scatter-filters__body {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    right: 0;
+    width: min(360px, 80vw);
+    border: 1px solid rgba(17, 24, 39, 0.12);
+    border-radius: 12px;
+    background: var(--ui-card, var(--card));
+    box-shadow: 0 14px 28px rgba(17, 24, 39, 0.2);
 }
 
 .sla-subpanel {
@@ -871,6 +1055,14 @@ h2 {
 .sla-subpanel__title {
     margin: 0 0 14px;
     font-size: 1rem;
+}
+
+.sla-metric-description {
+    max-width: 680px;
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
 }
 
 .sla-side {

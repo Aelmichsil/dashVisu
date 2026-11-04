@@ -92,10 +92,16 @@ const recorrenteSortElement = document.getElementById("recorrenteSort");
 const recorrenteTableBody = document.getElementById("recorrenteTableBody");
 const cidadeHeatmapStatusElement = document.getElementById("cidadeHeatmapStatus");
 const slaSummaryEl = document.getElementById("slaSummary");
+const slaDispersaoTipoStatusElement = document.getElementById("slaDispersaoTipoStatus");
+const slaDispersaoModoTipo = document.getElementById("slaDispersaoModoTipo");
+const slaDispersaoModoUsuario = document.getElementById("slaDispersaoModoUsuario");
+const slaDispersaoOpcoes = document.getElementById("slaDispersaoOpcoes");
 const slaDistCanvas = document.getElementById("slaDistChart");
 const slaTipoCanvas = document.getElementById("slaTipoChart");
+const slaDispersaoTipoCanvas = document.getElementById("slaDispersaoTipoChart");
 const motivoCanvas = document.getElementById("motivoChart");
 const tipoCanvas = document.getElementById("tipoChart");
+const copyTipoAtendimentoButton = document.getElementById("copyTipoAtendimentoButton");
 const planoServicoCanvas = document.getElementById("planoServicoChart");
 const cidadeCanvas = document.getElementById("cidadeChart");
 const bairroCanvas = document.getElementById("bairroChart");
@@ -121,7 +127,7 @@ const codigoClienteColumnSelect = document.getElementById("codigoClienteColumnSe
 const protocoloAtendimentoColumnSelect = document.getElementById("protocoloAtendimentoColumnSelect");
 const fileOsStatusElement = document.getElementById("fileOsStatus");
 // Membros da equipe Suporte (todos em minúsculo para bater com normalizarTextoBusca)
-const EQUIPE_SUPORTE_PREFIXOS = ["michael", "israel", "arthur", "richard", "pedro", "jobert"];
+const EQUIPE_SUPORTE_PREFIXOS = ["richard", "michael", "joubert", "kaua", "pedro", "maura", "lorena"];
 const manualStorageKey = "atendimentos-manual-v1";
 const importStorageKey = "atendimentos-importados-v1";
 const osStorageKey = "atendimentos-os-v1";
@@ -176,8 +182,13 @@ let topUsersChart;
 let resolutionChart;
 let slaDistChart;
 let slaTipoChart;
+let slaDispersaoTipoChart;
+let slaDispersaoAgrupamento = "tipoAtendimento";
+let slaDispersaoRegistrosAtuais = [];
+let slaDispersaoSelecionados = new Set();
 let motivoChart;
 let tipoChart;
+let dadosTipoAtendimentoParaCopia = [];
 let planoServicoChart;
 let cidadeChart;
 let bairroChart;
@@ -607,6 +618,7 @@ function atualizarInterfaceFiltrosMultiplos() {
     renderizarOpcoesFiltro(filterCity, filterCitySearch, filterCityOptions);
     renderizarOpcoesFiltro(filterBairro, filterBairroSearch, filterBairroOptions);
     renderizarOpcoesFiltro(filterMonth, filterMonthSearch, filterMonthOptions);
+    atualizarMembrosEquipeSuporte();
 }
 
 function obterConfiguracaoFiltrosAtual() {
@@ -1735,11 +1747,42 @@ function obterResumoSla(registros) {
         : sorted[Math.floor(sorted.length / 2)];
 
     const mediaPorTipo = Object.entries(porTipo)
-        .map(([tipo, arr]) => ({ tipo, media: arr.reduce((a, b) => a + b, 0) / arr.length, total: arr.length }))
+        .map(([tipo, arr]) => {
+            const ordenados = arr.slice().sort((a, b) => a - b);
+            const meio = Math.floor(ordenados.length / 2);
+            const medianaTipo = ordenados.length % 2 === 0
+                ? (ordenados[meio - 1] + ordenados[meio]) / 2
+                : ordenados[meio];
+            const frequencias = new Map();
+            arr.forEach((horas) => {
+                const horaArredondada = Math.round(horas);
+                frequencias.set(horaArredondada, (frequencias.get(horaArredondada) || 0) + 1);
+            });
+            const modaTipo = Array.from(frequencias.entries())
+                .sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+
+            return {
+                tipo,
+                media: arr.reduce((a, b) => a + b, 0) / arr.length,
+                mediana: medianaTipo,
+                moda: modaTipo,
+                total: arr.length
+            };
+        })
         .sort((a, b) => b.media - a.media)
         .slice(0, 10);
 
-    return { total: slas.length, media, mediana, faixas, mediaPorTipo };
+    const dispersaoPorTipo = Object.entries(porTipo)
+        .map(([tipo, arr]) => ({
+            tipo,
+            media: arr.reduce((a, b) => a + b, 0) / arr.length,
+            total: arr.length,
+            acimaSla: arr.filter((horas) => horas > 24).length
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 20);
+
+    return { total: slas.length, media, mediana, faixas, mediaPorTipo, dispersaoPorTipo };
 }
 
 function formatarHoras(h) {
@@ -1815,33 +1858,52 @@ function montarSlaTipoChart(resumo) {
     if (!resumo || !resumo.mediaPorTipo || resumo.mediaPorTipo.length === 0) return;
 
     const labels = resumo.mediaPorTipo.map((i) => i.tipo);
-    const valores = resumo.mediaPorTipo.map((i) => Math.round(i.media));
+    const medias = resumo.mediaPorTipo.map((i) => Number(i.media.toFixed(1)));
+    const medianas = resumo.mediaPorTipo.map((i) => Number(i.mediana.toFixed(1)));
+    const modas = resumo.mediaPorTipo.map((i) => i.moda);
     const tema = obterTemaGrafico();
 
     slaTipoChart = new Chart(slaTipoCanvas, {
         type: "bar",
         data: {
             labels,
-            datasets: [{
-                label: "SLA medio (horas)",
-                data: valores,
-                backgroundColor: CHART_PALETTE.violet,
-                borderRadius: 6,
-                borderSkipped: false
-            }]
+            datasets: [
+                {
+                    label: "Média",
+                    data: medias,
+                    backgroundColor: CHART_PALETTE.violet,
+                    borderRadius: 5,
+                    borderSkipped: false
+                },
+                {
+                    label: "Mediana",
+                    data: medianas,
+                    backgroundColor: CHART_PALETTE.info,
+                    borderRadius: 5,
+                    borderSkipped: false
+                },
+                {
+                    label: "Moda (hora)",
+                    data: modas,
+                    backgroundColor: CHART_PALETTE.warn,
+                    borderRadius: 5,
+                    borderSkipped: false
+                }
+            ]
         },
         options: {
             indexAxis: "y",
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: { position: "top", labels: { color: tema.text, boxWidth: 12 } },
                 datalabels: {
-                    anchor: "end",
-                    align: "end",
-                    color: tema.text,
-                    font: { size: 11 },
-                    formatter: (v) => formatarHoras(v)
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (contexto) => `${contexto.dataset.label}: ${formatarHoras(contexto.parsed.x)}`
+                    }
                 }
             },
             scales: {
@@ -1850,6 +1912,151 @@ function montarSlaTipoChart(resumo) {
             }
         },
         plugins: [window.ChartDataLabels].filter(Boolean)
+    });
+}
+
+function obterDadosDispersaoSla(registros, campo) {
+    const grupos = {};
+    (registros || []).forEach((registro) => {
+        const horas = calcularSlaHoras(registro);
+        if (horas === null) return;
+        const chave = String(registro && registro[campo] || "").trim() || "Sem informação";
+        if (!grupos[chave]) grupos[chave] = [];
+        grupos[chave].push(horas);
+    });
+
+    return Object.entries(grupos)
+        .map(([nome, horas]) => ({
+            tipo: nome,
+            media: horas.reduce((total, valor) => total + valor, 0) / horas.length,
+            total: horas.length,
+            acimaSla: horas.filter((valor) => valor > 24).length
+        }))
+        .filter((item) => slaDispersaoSelecionados.size === 0 || slaDispersaoSelecionados.has(item.tipo))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 20);
+}
+
+function atualizarOpcoesFiltroDispersao(registros) {
+    if (!slaDispersaoOpcoes) return;
+
+    const valores = Array.from(new Set((registros || []).map((registro) => {
+        const valor = String(registro && registro[slaDispersaoAgrupamento] || "").trim();
+        return valor || "Sem informação";
+    }))).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    if (slaDispersaoOpcoes.dataset.inicializado !== "true") {
+        slaDispersaoSelecionados = new Set(valores);
+    } else {
+        slaDispersaoSelecionados = new Set(valores.filter((valor) => slaDispersaoSelecionados.has(valor)));
+    }
+    slaDispersaoOpcoes.dataset.inicializado = "true";
+
+    slaDispersaoOpcoes.innerHTML = valores.length
+        ? valores.map((valor, indice) => {
+            const id = `sla-dispersao-opcao-${slaDispersaoAgrupamento}-${indice}`;
+            const checked = slaDispersaoSelecionados.has(valor) ? " checked" : "";
+            return `<label for="${id}"><input id="${id}" type="checkbox" data-sla-dispersao-valor="${escaparHtml(valor)}"${checked} /> <span>${escaparHtml(valor)}</span></label>`;
+        }).join("")
+        : '<span class="sla-scatter-filters__empty">Nenhuma opção disponível.</span>';
+
+    slaDispersaoOpcoes.querySelectorAll("input[data-sla-dispersao-valor]").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            const valor = String(checkbox.getAttribute("data-sla-dispersao-valor") || "");
+            if (checkbox.checked) slaDispersaoSelecionados.add(valor);
+            else slaDispersaoSelecionados.delete(valor);
+            montarSlaDispersaoTipoChart(null, slaDispersaoRegistrosAtuais);
+        });
+    });
+}
+
+function montarSlaDispersaoTipoChart(resumo, registros) {
+    if (!slaDispersaoTipoCanvas) return;
+    if (slaDispersaoTipoChart) { slaDispersaoTipoChart.destroy(); slaDispersaoTipoChart = null; }
+    if (Array.isArray(registros)) slaDispersaoRegistrosAtuais = registros.slice();
+    atualizarOpcoesFiltroDispersao(slaDispersaoRegistrosAtuais);
+    const dispersao = obterDadosDispersaoSla(slaDispersaoRegistrosAtuais, slaDispersaoAgrupamento);
+    if (dispersao.length === 0) return;
+
+    const tema = obterTemaGrafico();
+    const dados = dispersao.map((item) => ({
+        x: item.total,
+        y: Number(item.media.toFixed(2)),
+        tipo: item.tipo,
+        acimaSla: item.acimaSla
+    }));
+
+    slaDispersaoTipoChart = new Chart(slaDispersaoTipoCanvas, {
+        type: "scatter",
+        data: {
+            datasets: [{
+                label: "Tipos de atendimento",
+                data: dados,
+                backgroundColor: CHART_PALETTE.violet,
+                borderColor: CHART_PALETTE.indigo,
+                borderWidth: 1.5,
+                pointRadius: dados.map((item) => Math.min(16, 6 + Math.sqrt(item.acimaSla || 0))),
+                pointHoverRadius: 9
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (contexto) => {
+                            const ponto = contexto.raw || {};
+                            return `${ponto.tipo}: ${ponto.x} atendimentos | ${formatarHoras(ponto.y)} de SLA médio | ${ponto.acimaSla || 0} acima de 24h`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: tema.text,
+                    align: "top",
+                    anchor: "end",
+                    font: { size: 10, weight: "600" },
+                    formatter: (valor) => valor.tipo
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: "Quantidade de atendimentos", color: tema.text },
+                    grid: { color: tema.grid },
+                    ticks: { color: tema.text, precision: 0 }
+                },
+                y: {
+                    title: { display: true, text: "SLA médio", color: tema.text },
+                    grid: { color: tema.grid },
+                    ticks: { color: tema.text, callback: (valor) => formatarHoras(valor) }
+                }
+            }
+        },
+        plugins: [window.ChartDataLabels].filter(Boolean)
+    });
+}
+
+function alterarAgrupamentoDispersaoSla(campo) {
+    slaDispersaoAgrupamento = campo;
+    if (slaDispersaoModoTipo) slaDispersaoModoTipo.checked = campo === "tipoAtendimento";
+    if (slaDispersaoModoUsuario) slaDispersaoModoUsuario.checked = campo === "usuarioAbertura";
+    slaDispersaoSelecionados = new Set();
+    if (slaDispersaoOpcoes) slaDispersaoOpcoes.dataset.inicializado = "false";
+    montarSlaDispersaoTipoChart(null, slaDispersaoRegistrosAtuais);
+}
+
+if (slaDispersaoModoTipo) {
+    slaDispersaoModoTipo.addEventListener("change", () => {
+        if (slaDispersaoModoTipo.checked) alterarAgrupamentoDispersaoSla("tipoAtendimento");
+        else slaDispersaoModoTipo.checked = true;
+    });
+}
+
+if (slaDispersaoModoUsuario) {
+    slaDispersaoModoUsuario.addEventListener("change", () => {
+        if (slaDispersaoModoUsuario.checked) alterarAgrupamentoDispersaoSla("usuarioAbertura");
+        else slaDispersaoModoUsuario.checked = true;
     });
 }
 
@@ -2105,6 +2312,8 @@ function montarTipoChart(registros) {
     if (!tipoCanvas) return;
     if (tipoChart) { tipoChart.destroy(); tipoChart = null; }
     const dados = obterContagemPorCampo(registros, "tipoAtendimento", 12);
+    dadosTipoAtendimentoParaCopia = dados;
+    if (copyTipoAtendimentoButton) copyTipoAtendimentoButton.disabled = dados.length === 0;
     if (dados.length === 0) return;
 
     const tema = obterTemaGrafico();
@@ -2140,6 +2349,153 @@ function montarTipoChart(registros) {
         plugins: [window.ChartDataLabels].filter(Boolean)
     });
 }
+
+async function copiarTiposAtendimento() {
+    if (!dadosTipoAtendimentoParaCopia.length) return;
+
+    const texto = dadosTipoAtendimentoParaCopia
+        .map((item) => `${item.label}: ${item.count}`)
+        .join("\n");
+
+    try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(texto);
+        } else {
+            const auxiliar = document.createElement("textarea");
+            auxiliar.value = texto;
+            auxiliar.setAttribute("readonly", "");
+            auxiliar.style.position = "fixed";
+            auxiliar.style.opacity = "0";
+            document.body.appendChild(auxiliar);
+            auxiliar.select();
+            document.execCommand("copy");
+            auxiliar.remove();
+        }
+
+        if (copyTipoAtendimentoButton) {
+            const tituloOriginal = copyTipoAtendimentoButton.title;
+            copyTipoAtendimentoButton.textContent = "Copiado";
+            copyTipoAtendimentoButton.title = "Lista copiada";
+            setTimeout(() => {
+                copyTipoAtendimentoButton.textContent = "Copiar";
+                copyTipoAtendimentoButton.title = tituloOriginal;
+            }, 1600);
+        }
+    } catch (error) {
+        console.warn("[Dashboard] Não foi possível copiar os atendimentos por tipo:", error);
+    }
+}
+
+if (copyTipoAtendimentoButton) {
+    copyTipoAtendimentoButton.addEventListener("click", copiarTiposAtendimento);
+}
+
+function obterGraficoDoCanvas(canvasElement) {
+    if (!canvasElement || typeof Chart === "undefined" || typeof Chart.getChart !== "function") return null;
+    return Chart.getChart(canvasElement);
+}
+
+function obterTextoTituloGrafico(container) {
+    const titulo = container.querySelector(".card__title-wrap h2, .sla-subpanel__title, h2, h3");
+    return titulo ? String(titulo.textContent || "").replace(/\s+/g, " ").trim() : "Dados do gráfico";
+}
+
+function copiarDadosDoGrafico(canvasElement, botao) {
+    const grafico = obterGraficoDoCanvas(canvasElement);
+    if (!grafico || !grafico.data) {
+        botao.textContent = "Sem dados";
+        setTimeout(() => { botao.textContent = "Copiar"; }, 1600);
+        return;
+    }
+
+    const labels = grafico.data.labels || [];
+    const linhas = [];
+    (grafico.data.datasets || []).forEach((dataset, indiceDataset) => {
+        const valores = Array.isArray(dataset.data) ? dataset.data : [];
+        const nomeDataset = dataset.label && grafico.data.datasets.length > 1 ? `${dataset.label}: ` : "";
+        valores.forEach((valor, indice) => {
+            if (valor && typeof valor === "object" && Object.prototype.hasOwnProperty.call(valor, "x")) {
+                const rotulo = valor.tipo || labels[indice] || `Item ${indice + 1}`;
+                linhas.push(`${rotulo}: ${valor.x} atendimentos | ${formatarHoras(Number(valor.y) || 0)} de SLA médio | ${valor.acimaSla || 0} acima de 24h`);
+                return;
+            }
+            const rotulo = labels[indice] === undefined ? `Item ${indice + 1}` : labels[indice];
+            linhas.push(`${rotulo}: ${nomeDataset}${valor}`);
+        });
+        if (indiceDataset < grafico.data.datasets.length - 1 && linhas.length) linhas.push("");
+    });
+
+    if (!linhas.length) {
+        botao.textContent = "Sem dados";
+        setTimeout(() => { botao.textContent = "Copiar"; }, 1600);
+        return;
+    }
+
+    const container = canvasElement.closest(".sla-subpanel, .analytics-card, .card") || document.body;
+    const texto = `${obterTextoTituloGrafico(container)}\n${linhas.join("\n")}`;
+
+    const concluir = () => {
+        const tituloOriginal = botao.title;
+        botao.textContent = "Copiado";
+        botao.title = "Dados copiados";
+        setTimeout(() => {
+            botao.textContent = "Copiar";
+            botao.title = tituloOriginal;
+        }, 1600);
+    };
+
+    const copiarFallback = () => {
+        const auxiliar = document.createElement("textarea");
+        auxiliar.value = texto;
+        auxiliar.setAttribute("readonly", "");
+        auxiliar.style.position = "fixed";
+        auxiliar.style.opacity = "0";
+        document.body.appendChild(auxiliar);
+        auxiliar.select();
+        document.execCommand("copy");
+        auxiliar.remove();
+    };
+
+    (navigator.clipboard && typeof navigator.clipboard.writeText === "function"
+        ? navigator.clipboard.writeText(texto)
+        : Promise.resolve().then(copiarFallback))
+        .then(concluir)
+        .catch((error) => console.warn("[Dashboard] Não foi possível copiar os dados do gráfico:", error));
+}
+
+function inicializarBotoesCopiarGraficos() {
+    document.querySelectorAll("canvas").forEach((canvasElement) => {
+        if (canvasElement.id === "tipoChart" || canvasElement.closest(".chart-copy-ignore")) return;
+
+        const container = canvasElement.closest(".sla-subpanel, .analytics-card, .card");
+        if (!container) return;
+
+        let tituloWrap = container.querySelector(":scope > .card__title-wrap");
+        if (!tituloWrap) tituloWrap = canvasElement.closest(".sla-subpanel")?.querySelector(":scope > .card__title-wrap");
+        if (!tituloWrap) {
+            const titulo = container.querySelector(":scope > h3, :scope > h2");
+            if (!titulo) return;
+            tituloWrap = document.createElement("div");
+            tituloWrap.className = "card__title-wrap";
+            titulo.parentNode.insertBefore(tituloWrap, titulo);
+            tituloWrap.appendChild(titulo);
+        }
+
+        if (tituloWrap.querySelector(`[data-copy-chart="${canvasElement.id}"]`)) return;
+
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "secondary-button copy-chart-button";
+        botao.textContent = "Copiar";
+        botao.title = "Copiar dados deste gráfico";
+        botao.setAttribute("aria-label", "Copiar dados deste gráfico");
+        botao.dataset.copyChart = canvasElement.id;
+        botao.addEventListener("click", () => copiarDadosDoGrafico(canvasElement, botao));
+        tituloWrap.appendChild(botao);
+    });
+}
+
+inicializarBotoesCopiarGraficos();
 
 function montarCidadeChart(registros) {
     if (!cidadeCanvas) return;
@@ -3687,6 +4043,7 @@ function atualizarDashboardsSlaEMotivo(registros) {
     montarSlaSummary(resumoSla);
     montarSlaDistChart(resumoSla);
     montarSlaTipoChart(resumoSla);
+    montarSlaDispersaoTipoChart(resumoSla, registrosSla);
     montarMotivoChart(registrosSla);
     atualizarKpiIncidenciaLentidao(registros);
     montarTipoChart(registrosSla);
@@ -3707,8 +4064,15 @@ function atualizarDashboardsSlaEMotivo(registros) {
     }
     if (slaTipoStatusElement) {
         slaTipoStatusElement.textContent = resumoSla && resumoSla.mediaPorTipo.length > 0
-            ? `Top ${resumoSla.mediaPorTipo.length} tipos por SLA medio.`
+            ? `Top ${resumoSla.mediaPorTipo.length} tipos: média, mediana e moda do SLA (moda arredondada em horas).`
             : "Mapeie tipo_atendimento e as colunas de data para ver o SLA por tipo.";
+    }
+    if (slaDispersaoTipoStatusElement) {
+        const nomeAgrupamento = slaDispersaoAgrupamento === "usuarioAbertura" ? "usuário(s) de abertura" : "tipo(s)";
+        const quantidadeAgrupamentos = obterDadosDispersaoSla(registrosSla, slaDispersaoAgrupamento).length;
+        slaDispersaoTipoStatusElement.textContent = quantidadeAgrupamentos > 0
+            ? `${quantidadeAgrupamentos} ${nomeAgrupamento}: volume x SLA medio.`
+            : "Mapeie tipo_atendimento/usuario_abertura e as colunas de data para ver este grafico.";
     }
     const temMotivo = (registros || []).some((r) => r.motivoFechamento && r.motivoFechamento !== "-");
     if (motivoStatusElement) {
@@ -6795,10 +7159,58 @@ function aplicarFiltroEquipe(prefixos) {
 
 const filtroEquipeSuporteBtn = document.getElementById("filtroEquipeSuporte");
 const filtroEquipeLimparBtn = document.getElementById("filtroEquipeLimpar");
+const filtroEquipeSuporteMembros = document.getElementById("filtroEquipeSuporteMembros");
+
+function obterMembrosEquipe(prefixos) {
+    if (!filterOpeningUser) return [];
+
+    return Array.from(filterOpeningUser.options || [])
+        .map((opcao) => String(opcao.value || "").trim())
+        .filter((nome, indice, nomes) => {
+            const nomeNormalizado = normalizarTextoBusca(nome);
+            return nome && prefixos.some((prefixo) => nomeNormalizado.startsWith(prefixo)) && nomes.indexOf(nome) === indice;
+        });
+}
+
+function atualizarMembrosEquipeSuporte() {
+    if (!filtroEquipeSuporteMembros || filtroEquipeSuporteMembros.hidden) return;
+
+    const membros = obterMembrosEquipe(EQUIPE_SUPORTE_PREFIXOS);
+    const selecionados = new Set(obterValoresSelecionadosDoFiltro(filterOpeningUser).map(normalizarTextoBusca));
+
+    if (membros.length === 0) {
+        filtroEquipeSuporteMembros.innerHTML = '<span class="team-member-options__empty">Nenhum integrante da equipe encontrado nos dados importados.</span>';
+        return;
+    }
+
+    filtroEquipeSuporteMembros.innerHTML = membros.map((nome, indice) => {
+        const id = `filtro-equipe-suporte-membro-${indice}`;
+        const checked = selecionados.has(normalizarTextoBusca(nome)) ? " checked" : "";
+        return `<label class="team-member-option" for="${id}"><input id="${id}" type="checkbox" data-value="${escaparHtml(nome)}"${checked} /><span>${escaparHtml(nome)}</span></label>`;
+    }).join("");
+
+    Array.from(filtroEquipeSuporteMembros.querySelectorAll("input[type=checkbox][data-value]")).forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            const valor = String(checkbox.getAttribute("data-value") || "");
+            Array.from(filterOpeningUser.options || []).forEach((opcao) => {
+                if (String(opcao.value || "") === valor) opcao.selected = checkbox.checked;
+            });
+            atualizarInterfaceFiltrosMultiplos();
+            atualizarGraficoComDadosAtuais();
+            atualizarAnalisesImportacao();
+            atualizarRotuloBotaoFiltrosAnalise();
+        });
+    });
+}
 
 if (filtroEquipeSuporteBtn) {
     filtroEquipeSuporteBtn.addEventListener("click", () => {
         aplicarFiltroEquipe(EQUIPE_SUPORTE_PREFIXOS);
+        if (filtroEquipeSuporteMembros) {
+            filtroEquipeSuporteMembros.hidden = false;
+            filtroEquipeSuporteBtn.setAttribute("aria-expanded", "true");
+            atualizarMembrosEquipeSuporte();
+        }
     });
 }
 
@@ -6809,6 +7221,11 @@ if (filtroEquipeLimparBtn) {
             Array.from(filterOpeningUser.options || []).forEach((o) => { o.selected = false; });
         }
         if (filterOpeningUserSearch) filterOpeningUserSearch.value = "";
+        if (filtroEquipeSuporteMembros) {
+            filtroEquipeSuporteMembros.hidden = true;
+            filtroEquipeSuporteMembros.innerHTML = "";
+        }
+        if (filtroEquipeSuporteBtn) filtroEquipeSuporteBtn.setAttribute("aria-expanded", "false");
         atualizarInterfaceFiltrosMultiplos();
         atualizarGraficoComDadosAtuais();
         atualizarAnalisesImportacao();
