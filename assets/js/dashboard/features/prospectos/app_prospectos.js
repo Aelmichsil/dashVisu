@@ -93,7 +93,7 @@
                 paginaDetalheAtual = 1;
                 atualizarStatusArquivo(files);
 
-                if (importarAposSelecao && arquivoSelecionado) {
+                if (arquivoSelecionado) {
                     importarAposSelecao = false;
                     processarArquivo();
                 }

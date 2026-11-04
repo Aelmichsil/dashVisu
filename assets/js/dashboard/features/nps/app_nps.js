@@ -1117,6 +1117,7 @@
                 fileStatus.textContent = fileInput.files[0]
                     ? fileInput.files[0].name
                     : "Nenhum arquivo selecionado.";
+                if (fileInput.files[0] && importBtn) importBtn.click();
             });
         }
 

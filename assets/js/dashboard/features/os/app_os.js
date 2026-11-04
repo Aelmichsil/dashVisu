@@ -1083,6 +1083,7 @@
         // Eventos importação
         elFileInput?.addEventListener("change", () => {
             elFileStatusText && (elFileStatusText.textContent = elFileInput.files?.[0]?.name || "");
+            if (elFileInput.files?.[0]) importar();
         });
         elImportBtn?.addEventListener("click", importar);
         elLimparBtn?.addEventListener("click", limpar);

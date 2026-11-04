@@ -1306,6 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputFile.addEventListener('change', () => {
             const arquivos = Array.from(inputFile.files || []);
             atualizarTextoPorId('chatFileStatus', arquivos.length ? `Arquivo(s) selecionado(s): ${arquivos.map(f => f.name).join(', ')}` : 'Nenhum arquivo selecionado.');
+            if (arquivos.length) processarArquivos(arquivos);
         });
     }
 
