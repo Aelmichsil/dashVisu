@@ -365,6 +365,7 @@ function obterFiltrosAtuais() {
     const selectServico = obterElementoPorId('chatFiltroServico');
     const selectStatus = obterElementoPorId('chatFiltroStatus');
     const selectTipo = obterElementoPorId('chatFiltroTipo');
+    const selectClassificacao = obterElementoPorId('chatFiltroClassificacao');
     const selectRecorrencia = obterElementoPorId('chatFiltroRecorrencia');
     const selectModo = obterElementoPorId('chatFiltroModo');
 
@@ -380,6 +381,9 @@ function obterFiltrosAtuais() {
     const tiposSelecionados = selectTipo
         ? Array.from(selectTipo.selectedOptions || []).map(opt => opt.value).filter(Boolean)
         : [];
+    const classificacoesSelecionadas = selectClassificacao
+        ? Array.from(selectClassificacao.selectedOptions || []).map(opt => opt.value).filter(Boolean)
+        : [];
     const recorrenciasSelecionadas = selectRecorrencia
         ? Array.from(selectRecorrencia.selectedOptions || []).map(opt => opt.value).filter(Boolean)
         : [];
@@ -392,6 +396,7 @@ function obterFiltrosAtuais() {
         servicos: servicosSelecionados,
         status: statusSelecionados,
         tipos: tiposSelecionados,
+        classificacoes: classificacoesSelecionadas,
         recorrencias: recorrenciasSelecionadas,
         modos: modosSelecionados,
         periodo: obterElementoPorId('chatFiltroPeriodo') ? obterElementoPorId('chatFiltroPeriodo').value : 'todos'
@@ -407,6 +412,7 @@ function aplicarFiltros(registros) {
         if (f.servicos.length && !f.servicos.includes(r.servico)) return false;
         if (f.status.length && !f.status.includes(r.status)) return false;
         if (f.tipos.length && !f.tipos.includes(r.tipo)) return false;
+        if (f.classificacoes.length && !f.classificacoes.includes(r.classif)) return false;
         if (f.recorrencias.length && !f.recorrencias.includes(normalizarRecorrencia(r.recorrencia))) return false;
         if (f.modos.length && !f.modos.includes(r.modo)) return false;
         if (f.periodo !== 'todos' && r.dataEntrada) {
@@ -450,6 +456,7 @@ function popularTodosFiltros(registros) {
     popularSelectFiltro('chatFiltroServico', registros, 'servico', 'Todos os serviços');
     popularSelectFiltro('chatFiltroStatus', registros, 'status', 'Todos os status');
     popularSelectFiltro('chatFiltroTipo', registros, 'tipo', 'Todos os tipos');
+    popularSelectFiltro('chatFiltroClassificacao', registros, 'classif', 'Todas as classificações');
     popularSelectFiltro(
         'chatFiltroRecorrencia',
         registros.map(r => ({ ...r, recorrencia: normalizarRecorrencia(r.recorrencia) })),
@@ -478,6 +485,11 @@ function popularTodosFiltros(registros) {
         obterElementoPorId('chatFiltroTipo'),
         obterElementoPorId('chatFiltroTipoSearch'),
         obterElementoPorId('chatFiltroTipoOptions')
+    );
+    renderizarOpcoesFiltroChat(
+        obterElementoPorId('chatFiltroClassificacao'),
+        obterElementoPorId('chatFiltroClassificacaoSearch'),
+        obterElementoPorId('chatFiltroClassificacaoOptions')
     );
     renderizarOpcoesFiltroChat(
         obterElementoPorId('chatFiltroRecorrencia'),
@@ -1353,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnLimparFiltros) {
         btnLimparFiltros.addEventListener('click', () => {
             ['chatFiltroAgente', 'chatFiltroServico', 'chatFiltroStatus', 'chatFiltroTipo',
-                'chatFiltroRecorrencia', 'chatFiltroModo'].forEach(id => {
+                'chatFiltroClassificacao', 'chatFiltroRecorrencia', 'chatFiltroModo'].forEach(id => {
                     const s = obterElementoPorId(id);
                     if (!s) return;
 
@@ -1376,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { input: 'chatFiltroServicoSearch', select: 'chatFiltroServico', options: 'chatFiltroServicoOptions' },
         { input: 'chatFiltroStatusSearch', select: 'chatFiltroStatus', options: 'chatFiltroStatusOptions' },
         { input: 'chatFiltroTipoSearch', select: 'chatFiltroTipo', options: 'chatFiltroTipoOptions' },
+        { input: 'chatFiltroClassificacaoSearch', select: 'chatFiltroClassificacao', options: 'chatFiltroClassificacaoOptions' },
         { input: 'chatFiltroRecorrenciaSearch', select: 'chatFiltroRecorrencia', options: 'chatFiltroRecorrenciaOptions' },
         { input: 'chatFiltroModoSearch', select: 'chatFiltroModo', options: 'chatFiltroModoOptions' }
     ];
