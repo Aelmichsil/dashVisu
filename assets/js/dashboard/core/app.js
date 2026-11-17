@@ -223,8 +223,16 @@ let statusAbertosCache = {
 };
 let atendimentosGeraisCache = {
     reagendamento: [],
-    finalizados: []
+    finalizados: [],
+    suporteFinalizados: []
 };
+const ITENS_POR_PAGINA_ATENDIMENTOS = 10;
+const paginasAtendimentos = {
+    reagendamento: 0,
+    finalizados: 0,
+    suporteFinalizados: 0
+};
+let tipoAtendimentoSuporteSelecionado = "todos";
 const mesesReferencia = [
     "Janeiro",
     "Fevereiro",
@@ -3561,30 +3569,42 @@ function obterAtendimentosFinalizados(registros) {
     return itens;
 }
 
-function montarListaReagendamentoOs(registros) {
-    const el = document.getElementById("reagendamentoLista");
-    const statusEl = document.getElementById("reagendamentoStatus");
+function renderizarPaginacaoAtendimentos(tipo, total, elementoId) {
+    const el = document.getElementById(elementoId);
+    if (!el) return;
 
-    if (!el) {
-        atendimentosGeraisCache.reagendamento = [];
+    const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA_ATENDIMENTOS));
+    paginasAtendimentos[tipo] = Math.min(Math.max(0, paginasAtendimentos[tipo] || 0), totalPaginas - 1);
+
+    if (total <= ITENS_POR_PAGINA_ATENDIMENTOS) {
+        el.innerHTML = "";
         return;
     }
 
-    const itens = obterAtendimentosAguardandoReagendamento(registros);
-    atendimentosGeraisCache.reagendamento = itens.slice();
+    const paginaAtual = paginasAtendimentos[tipo];
+    el.innerHTML = `
+        <button type="button" class="atendimentos-paginacao__botao" data-atendimentos-tipo="${tipo}" data-atendimentos-pagina="${paginaAtual - 1}" ${paginaAtual === 0 ? "disabled" : ""}>Anterior</button>
+        <span class="atendimentos-paginacao__info">Página ${paginaAtual + 1} de ${totalPaginas} · ${total} registros</span>
+        <button type="button" class="atendimentos-paginacao__botao" data-atendimentos-tipo="${tipo}" data-atendimentos-pagina="${paginaAtual + 1}" ${paginaAtual >= totalPaginas - 1 ? "disabled" : ""}>Próxima</button>`;
+}
 
-    if (statusEl) {
-        statusEl.textContent = itens.length > 0
-            ? `${itens.length} atendimento(s) com OS agendada antes de hoje e ainda aguardando reagendamento.`
-            : "Nenhum atendimento com OS aguardando reagendamento no momento.";
-    }
+function obterItensDaPaginaAtendimentos(itens, tipo) {
+    const inicio = (paginasAtendimentos[tipo] || 0) * ITENS_POR_PAGINA_ATENDIMENTOS;
+    return itens.slice(inicio, inicio + ITENS_POR_PAGINA_ATENDIMENTOS);
+}
 
+function renderizarPaginaReagendamento() {
+    const el = document.getElementById("reagendamentoLista");
+    if (!el) return;
+
+    const itens = atendimentosGeraisCache.reagendamento || [];
     if (itens.length === 0) {
         el.innerHTML = '<p class="status-abertos__vazio">Nenhum atendimento com OS aguardando reagendamento.</p>';
+        renderizarPaginacaoAtendimentos("reagendamento", 0, "reagendamentoPaginacao");
         return;
     }
 
-    el.innerHTML = itens.map((item) => {
+    el.innerHTML = obterItensDaPaginaAtendimentos(itens, "reagendamento").map((item) => {
         const r = item.registro || {};
         const nome = String(r.nomeCliente || "").trim() || "—";
         const codigo = String(r.codigoCliente || "").trim() || "N/A";
@@ -3607,43 +3627,58 @@ function montarListaReagendamentoOs(registros) {
             <div class="status-abertos-item__tempo status-abertos-item__tempo--critical">Agendada para ${escaparHtml(dataProgramadaTexto)} · ${diasAtraso} dia(s) em atraso</div>
         </article>`;
     }).join("");
+
+    renderizarPaginacaoAtendimentos("reagendamento", itens.length, "reagendamentoPaginacao");
 }
 
-function montarListaAtendimentosFinalizados(registros) {
+function montarListaReagendamentoOs(registros) {
+    atendimentosGeraisCache.reagendamento = obterAtendimentosAguardandoReagendamento(registros);
+    paginasAtendimentos.reagendamento = Math.min(
+        paginasAtendimentos.reagendamento,
+        Math.max(0, Math.ceil(atendimentosGeraisCache.reagendamento.length / ITENS_POR_PAGINA_ATENDIMENTOS) - 1)
+    );
+
+    const statusReagendamento = document.getElementById("reagendamentoStatus");
+    if (statusReagendamento) {
+        statusReagendamento.textContent = atendimentosGeraisCache.reagendamento.length > 0
+            ? `${atendimentosGeraisCache.reagendamento.length} atendimento(s) com OS agendada antes de hoje e ainda aguardando reagendamento.`
+            : "Nenhum atendimento com OS aguardando reagendamento no momento.";
+    }
+    renderizarPaginaReagendamento();
+}
+
+function renderizarPaginaAtendimentosFinalizados() {
     const el = document.getElementById("atendimentosFinalizadosLista");
-    const statusEl = document.getElementById("atendimentosFinalizadosStatus");
 
     if (!el) {
-        atendimentosGeraisCache.finalizados = [];
         return;
     }
 
-    const itens = obterAtendimentosFinalizados(registros);
-    atendimentosGeraisCache.finalizados = itens.slice();
-
-    if (statusEl) {
-        statusEl.textContent = itens.length > 0
-            ? `${itens.length} atendimento(s) finalizado(s).`
-            : "Nenhum atendimento finalizado encontrado.";
-    }
+    const itens = atendimentosGeraisCache.finalizados || [];
 
     if (itens.length === 0) {
         el.innerHTML = '<p class="status-abertos__vazio">Nenhum atendimento finalizado.</p>';
+        renderizarPaginacaoAtendimentos("finalizados", 0, "atendimentosFinalizadosPaginacao");
         return;
     }
 
-    el.innerHTML = itens.map((item) => {
+    el.innerHTML = obterItensDaPaginaAtendimentos(itens, "finalizados").map((item) => {
         const r = item.registro || {};
         const nome = String(r.nomeCliente || "").trim() || "—";
         const codigo = String(r.codigoCliente || "").trim() || "N/A";
+        const usuarioAbertura = String(r.usuarioAbertura || "").trim() || "N/A";
+        const dataAbertura = String(r.dataAbertura || "").trim() || "N/A";
         const dataFechamento = String(r.dataFechamento || "").trim() || "N/A";
+        const motivoFechamento = String(r.motivoFechamento || "").trim() || "N/A";
         const descricaoFechamento = String(r.descricaoFechamento || "").trim() || "N/A";
         const numeroOs = String(item.numeroOs || "").trim();
         const osDescricaoFechamento = item.osRegistro ? String(item.osRegistro.descricaoFechamento || "").trim() : "";
 
         const blocoOs = numeroOs && item.osRegistro
             ? `<div class="status-abertos-item__meta">Ordem de servico #${escaparHtml(numeroOs)} — finalizacao: ${escaparHtml(osDescricaoFechamento || "N/A")}</div>`
-            : `<div class="status-abertos-item__meta">Sem ordem de servico vinculada.</div>`;
+            : numeroOs
+                ? `<div class="status-abertos-item__meta">Ordem de servico #${escaparHtml(numeroOs)} — detalhes não encontrados no arquivo OS.</div>`
+                : `<div class="status-abertos-item__meta">Sem ordem de servico vinculada.</div>`;
 
         return `<article class="status-abertos-item status-abertos-item--finalizado">
             <div class="status-abertos-item__top">
@@ -3651,16 +3686,154 @@ function montarListaAtendimentosFinalizados(registros) {
                 <span class="status-abertos-item__badge status-abertos-item__badge--finalizado">Finalizado</span>
             </div>
             <div class="status-abertos-item__meta">Codigo cliente: #${escaparHtml(codigo)}</div>
+            <div class="status-abertos-item__meta">Atendimento aberto em: ${escaparHtml(dataAbertura)} · por ${escaparHtml(usuarioAbertura)}</div>
             <div class="status-abertos-item__meta">Fechado em: ${escaparHtml(dataFechamento)}</div>
-            <div class="status-abertos-item__meta">Descricao da finalizacao: ${escaparHtml(descricaoFechamento)}</div>
+            <div class="status-abertos-item__meta">Motivo de fechamento: ${escaparHtml(motivoFechamento)}</div>
+            <div class="status-abertos-item__meta">Descrição de fechamento: ${escaparHtml(descricaoFechamento)}</div>
             ${blocoOs}
         </article>`;
     }).join("");
+
+    renderizarPaginacaoAtendimentos("finalizados", itens.length, "atendimentosFinalizadosPaginacao");
+}
+
+function montarListaAtendimentosFinalizados(registros) {
+    const statusEl = document.getElementById("atendimentosFinalizadosStatus");
+    atendimentosGeraisCache.finalizados = obterAtendimentosFinalizados(registros);
+    paginasAtendimentos.finalizados = Math.min(
+        paginasAtendimentos.finalizados,
+        Math.max(0, Math.ceil(atendimentosGeraisCache.finalizados.length / ITENS_POR_PAGINA_ATENDIMENTOS) - 1)
+    );
+
+    if (statusEl) {
+        statusEl.textContent = atendimentosGeraisCache.finalizados.length > 0
+            ? `${atendimentosGeraisCache.finalizados.length} atendimento(s) finalizado(s).`
+            : "Nenhum atendimento finalizado encontrado.";
+    }
+    renderizarPaginaAtendimentosFinalizados();
+}
+
+function registroEhSuporteTecnico(registro) {
+    const tipo = normalizarTextoBusca(registro && registro.tipoAtendimento);
+    const usuario = normalizarTextoBusca(registro && registro.usuarioAbertura);
+    return /suporte|tecnic/.test(tipo) || EQUIPE_SUPORTE_PREFIXOS.some((prefixo) => usuario.startsWith(prefixo));
+}
+
+function obterAtendimentosFinalizadosSuporte(registros) {
+    return obterAtendimentosFinalizados(registros).filter((item) => registroEhSuporteTecnico(item.registro));
+}
+
+function obterTipoAtendimentoSuporte(item) {
+    return String(item && item.registro && item.registro.tipoAtendimento || "").trim() || "Sem tipo informado";
+}
+
+function renderizarFiltrosTiposAtendimentosSuporte() {
+    const el = document.getElementById("atendimentosSuporteTipos");
+    if (!el) return;
+
+    const contagem = new Map();
+    (atendimentosGeraisCache.suporteFinalizados || []).forEach((item) => {
+        const tipo = obterTipoAtendimentoSuporte(item);
+        contagem.set(tipo, (contagem.get(tipo) || 0) + 1);
+    });
+
+    if (tipoAtendimentoSuporteSelecionado !== "todos" && !contagem.has(tipoAtendimentoSuporteSelecionado)) {
+        tipoAtendimentoSuporteSelecionado = "todos";
+    }
+
+    const tipos = Array.from(contagem.entries()).sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0], "pt-BR");
+    });
+
+    el.innerHTML = [
+        `<button type="button" class="atendimentos-tipo-btn${tipoAtendimentoSuporteSelecionado === "todos" ? " is-active" : ""}" data-tipo-atendimento="todos" aria-pressed="${tipoAtendimentoSuporteSelecionado === "todos"}">Todos <span>${(atendimentosGeraisCache.suporteFinalizados || []).length}</span></button>`,
+        ...tipos.map(([tipo, quantidade]) => `<button type="button" class="atendimentos-tipo-btn${tipoAtendimentoSuporteSelecionado === tipo ? " is-active" : ""}" data-tipo-atendimento="${escaparHtml(tipo)}" aria-pressed="${tipoAtendimentoSuporteSelecionado === tipo}">${escaparHtml(tipo)} <span>${quantidade}</span></button>`)
+    ].join("");
+}
+
+function atendimentoSuporteCombinaBusca(item, busca) {
+    const r = item.registro || {};
+    const os = item.osRegistro || {};
+    const texto = [
+        r.nomeCliente, r.codigoCliente, r.protocoloAtendimento, r.usuarioAbertura,
+        r.usuarioFechamento, r.tipoAtendimento, r.motivoFechamento,
+        r.descricaoFechamento, item.numeroOs, os.tecnico
+    ].map(normalizarTextoBusca).join(" ");
+    return !busca || texto.includes(normalizarTextoBusca(busca));
+}
+
+function renderizarPaginaAtendimentosSuporte() {
+    const el = document.getElementById("atendimentosSuporteLista");
+    if (!el) return;
+
+    const busca = document.getElementById("atendimentosSuporteBusca")?.value || "";
+    const itens = (atendimentosGeraisCache.suporteFinalizados || []).filter((item) => {
+        const tipoCombina = tipoAtendimentoSuporteSelecionado === "todos"
+            || obterTipoAtendimentoSuporte(item) === tipoAtendimentoSuporteSelecionado;
+        return tipoCombina && atendimentoSuporteCombinaBusca(item, busca);
+    });
+
+    paginasAtendimentos.suporteFinalizados = Math.min(
+        paginasAtendimentos.suporteFinalizados,
+        Math.max(0, Math.ceil(itens.length / ITENS_POR_PAGINA_ATENDIMENTOS) - 1)
+    );
+
+    if (itens.length === 0) {
+        el.innerHTML = '<p class="status-abertos__vazio">Nenhum atendimento finalizado de Suporte Técnico encontrado.</p>';
+        renderizarPaginacaoAtendimentos("suporteFinalizados", 0, "atendimentosSuportePaginacao");
+        return;
+    }
+
+    el.innerHTML = obterItensDaPaginaAtendimentos(itens, "suporteFinalizados").map((item) => {
+        const r = item.registro || {};
+        const os = item.osRegistro;
+        const cliente = String(r.nomeCliente || "").trim() || "Cliente não informado";
+        const codigo = String(r.codigoCliente || "").trim() || "N/A";
+        const protocolo = String(r.protocoloAtendimento || "").trim() || "N/A";
+        const tipo = String(r.tipoAtendimento || "").trim() || "Suporte Técnico";
+        const dataAbertura = String(r.dataAbertura || "").trim() || "N/A";
+        const dataFechamento = String(r.dataFechamento || "").trim() || "N/A";
+        const usuarioAbertura = String(r.usuarioAbertura || "").trim() || "N/A";
+        const usuarioFechamento = String(r.usuarioFechamento || "").trim() || "N/A";
+        const motivo = String(r.motivoFechamento || "").trim() || "N/A";
+        const descricaoFechamento = String(r.descricaoFechamento || "").trim() || "N/A";
+        const descricaoAbertura = String(r.descricaoAbertura || "").trim() || "N/A";
+        const localidade = [r.cidade, r.bairro].filter(Boolean).join(" · ") || "N/A";
+        const osHtml = os && item.numeroOs
+            ? `<div class="suporte-finalizado__os"><div class="suporte-finalizado__section-title">Ordem de serviço</div><div class="suporte-finalizado__grid"><span><b>Nº OS:</b> #${escaparHtml(item.numeroOs)}</span><span><b>Status:</b> ${escaparHtml(os.statusOs || "N/A")}</span><span><b>Técnico:</b> ${escaparHtml(os.tecnico || "N/A")}</span><span><b>Agendada:</b> ${escaparHtml(os.dataInicioProgramado || "N/A")}</span><span><b>Realizada:</b> ${escaparHtml(os.dataRealizada || "N/A")}</span><span><b>Fechamento OS:</b> ${escaparHtml(os.descricaoFechamento || "N/A")}</span></div></div>`
+            : item.numeroOs
+                ? `<div class="suporte-finalizado__os suporte-finalizado__os--empty">OS #${escaparHtml(item.numeroOs)} identificada no atendimento, mas os detalhes não foram encontrados no arquivo OS.</div>`
+                : `<div class="suporte-finalizado__os suporte-finalizado__os--empty">Sem ordem de serviço vinculada.</div>`;
+
+        return `<article class="suporte-finalizado-item">
+            <div class="suporte-finalizado__header"><div class="suporte-finalizado__identity"><h3>${escaparHtml(cliente)}</h3><span class="suporte-finalizado__sub">${escaparHtml(tipo)} · protocolo ${escaparHtml(protocolo)}</span><div class="suporte-finalizado__client-data"><span><b>Código:</b> #${escaparHtml(codigo)}</span><span><b>Localidade:</b> ${escaparHtml(localidade)}</span><span><b>Plano:</b> ${escaparHtml(r.numeroPlano || "N/A")}</span></div></div><span class="status-abertos-item__badge status-abertos-item__badge--finalizado">Finalizado</span></div>
+            <div class="suporte-finalizado__section"><div class="suporte-finalizado__section-title">Atendimento</div><div class="suporte-finalizado__grid"><span><b>Aberto em:</b> ${escaparHtml(dataAbertura)}</span><span><b>Fechado em:</b> ${escaparHtml(dataFechamento)}</span><span><b>Aberto por:</b> ${escaparHtml(usuarioAbertura)}</span><span><b>Fechado por:</b> ${escaparHtml(usuarioFechamento)}</span><span class="suporte-finalizado__wide"><b>Descrição da abertura:</b> ${escaparHtml(descricaoAbertura)}</span><span class="suporte-finalizado__wide"><b>Motivo de fechamento:</b> ${escaparHtml(motivo)}</span><span class="suporte-finalizado__wide"><b>Descrição de fechamento:</b> ${escaparHtml(descricaoFechamento)}</span></div></div>
+            ${osHtml}
+        </article>`;
+    }).join("");
+
+    renderizarPaginacaoAtendimentos("suporteFinalizados", itens.length, "atendimentosSuportePaginacao");
+}
+
+function montarListaAtendimentosFinalizadosSuporte(registros) {
+    const statusEl = document.getElementById("atendimentosSuporteStatus");
+    atendimentosGeraisCache.suporteFinalizados = obterAtendimentosFinalizadosSuporte(registros);
+    paginasAtendimentos.suporteFinalizados = 0;
+    renderizarFiltrosTiposAtendimentosSuporte();
+
+    if (statusEl) {
+        statusEl.textContent = atendimentosGeraisCache.suporteFinalizados.length > 0
+            ? `${atendimentosGeraisCache.suporteFinalizados.length} atendimento(s) finalizado(s) de Suporte Técnico.`
+            : "Nenhum atendimento finalizado de Suporte Técnico encontrado.";
+    }
+    renderizarPaginaAtendimentosSuporte();
 }
 
 function atualizarPainelAbaAtendimentos(registros) {
     montarListaReagendamentoOs(registros);
     montarListaAtendimentosFinalizados(registros);
+    montarListaAtendimentosFinalizadosSuporte(registros);
 }
 
 // ─── Produtividade por Atendente ──────────────────────────────────────────
@@ -7230,6 +7403,41 @@ if (filtroEquipeLimparBtn) {
         atualizarGraficoComDadosAtuais();
         atualizarAnalisesImportacao();
         atualizarRotuloBotaoFiltrosAnalise();
+    });
+}
+
+document.addEventListener("click", (evento) => {
+    const filtroTipo = evento.target.closest("[data-tipo-atendimento]");
+    if (filtroTipo) {
+        tipoAtendimentoSuporteSelecionado = filtroTipo.getAttribute("data-tipo-atendimento") || "todos";
+        paginasAtendimentos.suporteFinalizados = 0;
+        renderizarFiltrosTiposAtendimentosSuporte();
+        renderizarPaginaAtendimentosSuporte();
+        return;
+    }
+
+    const botao = evento.target.closest("[data-atendimentos-tipo][data-atendimentos-pagina]");
+    if (!botao || botao.disabled) return;
+
+    const tipo = botao.getAttribute("data-atendimentos-tipo");
+    const pagina = Number(botao.getAttribute("data-atendimentos-pagina"));
+    if (!Object.prototype.hasOwnProperty.call(paginasAtendimentos, tipo) || !Number.isFinite(pagina)) return;
+
+    paginasAtendimentos[tipo] = Math.max(0, pagina);
+    if (tipo === "reagendamento") {
+        renderizarPaginaReagendamento();
+    } else if (tipo === "finalizados") {
+        renderizarPaginaAtendimentosFinalizados();
+    } else if (tipo === "suporteFinalizados") {
+        renderizarPaginaAtendimentosSuporte();
+    }
+});
+
+const atendimentosSuporteBusca = document.getElementById("atendimentosSuporteBusca");
+if (atendimentosSuporteBusca) {
+    atendimentosSuporteBusca.addEventListener("input", () => {
+        paginasAtendimentos.suporteFinalizados = 0;
+        renderizarPaginaAtendimentosSuporte();
     });
 }
 

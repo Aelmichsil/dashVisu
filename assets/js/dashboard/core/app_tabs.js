@@ -9,6 +9,7 @@
     const mapeamentoAbas = {
         "tabHubsoft": "panelHubsoft",
         "tabAtendimentos": "panelAtendimentos", // Nova Aba Adicionada!
+        "tabAtendimentosSuporte": "panelAtendimentosSuporte",
         "tabChat": "panelChat",
         "tabNps": "panelNps",
         "tabPesquisa": "panelPesquisa",

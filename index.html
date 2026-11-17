@@ -44,6 +44,8 @@
 					aria-controls="panelHubsoft" aria-selected="true">&#128203; Hubsoft</button>
 				<button id="tabAtendimentos" class="nav-tab" type="button" role="tab" aria-controls="panelAtendimentos"
 					aria-selected="false">&#128197; Atendimentos</button>
+				<button id="tabAtendimentosSuporte" class="nav-tab" type="button" role="tab" aria-controls="panelAtendimentosSuporte"
+					aria-selected="false">&#128295; Finalizados - Suporte</button>
 				<button id="tabChat" class="nav-tab" type="button" role="tab" aria-controls="panelChat"
 					aria-selected="false">&#128172; Chat</button>
 				<button id="tabNps" class="nav-tab" type="button" role="tab" aria-controls="panelNps"
@@ -1092,6 +1094,7 @@
 				<p style="font-size:0.8rem;color:var(--muted);margin:-6px 0 12px;">Atendimentos cuja ordem de servico foi agendada antes da data atual e continua com status "aguardando_agendamento" (ou seja, o tecnico precisou reagendar).</p>
 				<div class="status-abertos-wrap">
 					<div id="reagendamentoLista" class="status-abertos-lista"></div>
+					<div id="reagendamentoPaginacao" class="atendimentos-paginacao" aria-label="Paginação dos atendimentos aguardando reagendamento"></div>
 				</div>
 			</section>
 
@@ -1102,6 +1105,7 @@
 				</div>
 				<div class="status-abertos-wrap">
 					<div id="atendimentosFinalizadosLista" class="status-abertos-lista"></div>
+					<div id="atendimentosFinalizadosPaginacao" class="atendimentos-paginacao" aria-label="Paginação dos atendimentos finalizados"></div>
 				</div>
 			</section>
 
@@ -1156,6 +1160,28 @@
 						</tbody>
 					</table>
 				</div>
+			</section>
+		</section>
+
+		<section id="panelAtendimentosSuporte" class="dashboard-panel" aria-labelledby="tabAtendimentosSuporte" hidden>
+			<section class="card analytics-card analytics-card--wide">
+				<div class="card__title-wrap">
+					<div>
+						<p class="eyebrow">Atendimentos Finalizados</p>
+						<h2>Suporte Técnico</h2>
+					</div>
+					<p id="atendimentosSuporteStatus" class="status">Importe os arquivos de Atendimentos e OS na aba Hubsoft para ver esta lista.</p>
+				</div>
+				<p class="atendimentos-painel-hint">Lista detalhada dos atendimentos finalizados relacionados ao Suporte Técnico. Os registros são organizados do mais recente para o mais antigo e exibidos 10 por vez.</p>
+				<div class="atendimentos-filtros" role="group" aria-label="Filtros dos atendimentos finalizados de suporte técnico">
+					<label class="atendimentos-filtro">
+						<span>Buscar cliente, código, protocolo ou responsável</span>
+						<input id="atendimentosSuporteBusca" class="filter-search" type="search" placeholder="Digite para buscar..." />
+					</label>
+				</div>
+				<div id="atendimentosSuporteTipos" class="atendimentos-tipos-filtro" role="group" aria-label="Filtrar por tipo de atendimento"></div>
+				<div id="atendimentosSuporteLista" class="suporte-finalizados-lista"></div>
+				<div id="atendimentosSuportePaginacao" class="atendimentos-paginacao" aria-label="Paginação dos atendimentos finalizados de suporte técnico"></div>
 			</section>
 		</section>
 
