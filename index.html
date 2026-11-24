@@ -56,8 +56,14 @@
 					aria-selected="false">Prospectos</button>
 				<button id="tabOs" class="nav-tab" type="button" role="tab" aria-controls="panelOs"
 					aria-selected="false">&#128295; Ordens de Serviço</button>
+				<button id="tabAgentes" class="nav-tab" type="button" role="tab" aria-controls="panelAgentes"
+					aria-selected="false">&#128101; Agentes</button>
 			</div>
 		</header>
+
+		<button id="openSettingsButton" class="settings-fab" type="button" aria-haspopup="dialog" aria-controls="settingsModal">
+			<span aria-hidden="true">&#9881;</span><span>Configurações</span>
+		</button>
 
 
 
@@ -1185,6 +1191,34 @@
 			</section>
 		</section>
 
+		<section id="panelAgentes" class="dashboard-panel" aria-labelledby="tabAgentes" hidden>
+			<section class="card agents-hero-card">
+				<div class="card__title-wrap agents-header">
+					<div>
+						<p class="eyebrow">Visão operacional</p>
+						<h2>Análise de Agentes</h2>
+						<p class="agents-subtitle">Volume, eficiência técnica e ritmo por atendente, usando o período selecionado no dashboard.</p>
+					</div>
+					<div class="agents-controls">
+						<label class="periodo-filter" for="agentsPeriodSelect"><span>Período</span>
+							<select id="agentsPeriodSelect" aria-label="Período da análise de agentes">
+								<option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option>
+							</select>
+						</label>
+						<label class="agents-select-label" for="agentsPersonSelect"><span>Atendente</span><select id="agentsPersonSelect" aria-label="Selecionar atendente"></select></label>
+					</div>
+				</div>
+				<div id="agentsTeamFilters" class="agents-team-filters" role="group" aria-label="Filtrar agentes por equipe">
+					<button type="button" class="agents-team-btn is-active" data-agents-team="todos" aria-pressed="true">Todos</button>
+					<button type="button" class="agents-team-btn" data-agents-team="Suporte Interno" aria-pressed="false">Suporte Interno</button>
+					<button type="button" class="agents-team-btn" data-agents-team="Comercial" aria-pressed="false">Comercial</button>
+					<button type="button" class="agents-team-btn" data-agents-team="Financeiro" aria-pressed="false">Financeiro</button>
+				</div>
+				<p id="agentsStatus" class="status agents-status">Configure as equipes e importe os atendimentos para começar.</p>
+				<div id="agentsKpis" class="agents-kpi-groups"></div>
+			</section>
+		</section>
+
 		<section id="panelNps" class="dashboard-panel" aria-labelledby="tabNps" hidden>
 			<section class="card nps-hero-card">
 				<div class="card__title-wrap">
@@ -2241,6 +2275,14 @@
 
 	</main>
 
+	<div id="settingsModal" class="modal-overlay settings-modal" hidden>
+		<div class="modal-card settings-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+			<header class="modal-card__header"><div><p class="eyebrow">Administração</p><h2 id="settingsTitle">Configurações</h2></div><button id="closeSettingsButton" class="modal-card__close" type="button" aria-label="Fechar configurações">×</button></header>
+			<div class="settings-tabs" role="tablist"><button class="settings-tab is-active" type="button" role="tab" aria-selected="true">Gestão de Equipes</button></div>
+			<div class="settings-content"><p class="settings-help">Vincule cada usuário a uma equipe. Os vínculos ficam salvos neste navegador até serem alterados.</p><div id="teamAssignmentsList" class="team-assignments-list"></div><div class="settings-actions"><button id="clearAssignmentsButton" class="secondary-button" type="button">Limpar Atribuições</button><span id="settingsSaveStatus" class="status" role="status"></span></div></div>
+		</div>
+	</div>
+
 	<!-- Bibliotecas base -->
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -2255,6 +2297,7 @@
 	<script src="assets/js/dashboard/features/prospectos/app_prospectos.js"></script>
 	<script src="assets/js/dashboard/features/os/app_os.js"></script>
 	<script src="assets/js/dashboard/features/atendimentos/app_atendimentos.js"></script>
+	<script src="assets/js/dashboard/features/agentes/app_agentes.js"></script>
 	<script src="assets/js/dashboard/core/app_import_hub.js"></script>
 
 	<!-- Orquestracao das abas (executar por ultimo) -->

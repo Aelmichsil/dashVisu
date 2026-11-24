@@ -14,7 +14,8 @@
         "tabNps": "panelNps",
         "tabPesquisa": "panelPesquisa",
         "tabProspecto": "panelProspecto",
-        "tabOs": "panelOs"
+        "tabOs": "panelOs",
+        "tabAgentes": "panelAgentes"
     };
 
     const botoes = Object.keys(mapeamentoAbas);

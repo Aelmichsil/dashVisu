@@ -208,6 +208,13 @@ let registrosAtuais = [];
 let registrosImportados = [];
 let registrosManuais = [];
 let registrosPreviaImportacao = [];
+
+// Interface pública mínima para módulos operacionais que precisam consumir
+// os mesmos registros normalizados deste painel.
+window.DashboardDataProvider = window.DashboardDataProvider || {
+    getRecords: () => [],
+    getPeriodDays: () => 30
+};
 let arquivoPreviaImportacao = "";
 let arquivoPreviaAtual = null;
 let supabaseDisponivel = Boolean(supabaseClient);
@@ -5927,6 +5934,10 @@ function adicionarAtendimentoManual(mes, quantidade) {
 
 function atualizarGraficoComDadosAtuais() {
     const baseImportada = obterRegistrosImportacaoBase();
+
+    window.DashboardDataProvider.getRecords = () => obterRegistrosImportacaoBase().slice();
+    window.DashboardDataProvider.getPeriodDays = () => Number(filterPeriodoDiasSelect?.value) || 30;
+    window.dispatchEvent(new CustomEvent("dashboardRecordsUpdated"));
 
     if (baseImportada.length > 0 || registrosImportados.length > 0 || registrosPreviaImportacao.length > 0) {
         const registrosFiltrados = obterRegistrosFiltrados();
